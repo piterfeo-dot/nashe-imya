@@ -1,0 +1,1316 @@
+<title>Наше имя</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one phone-sized column. Quiet tinted ground, one white card in the middle,
+   the name set big in a round display face with its first letter as a watermark. */
+:root{
+  --b-page:#C9D9EE; --b-bg:#E4EEF9; --b-card:#FFFFFF; --b-ink:#1B2A4E; --b-soft:#5C6C8F;
+  --b-accent:#3D6BD6; --b-tint:#D8E5F8; --b-line:#C5D4EA;
+  --g-page:#F0CAD8; --g-bg:#FBE6EC; --g-card:#FFFFFF; --g-ink:#4A1D33; --g-soft:#8F5F74;
+  --g-accent:#D2457C; --g-tint:#F9D8E3; --g-line:#F0C3D2;
+  --on-accent:#FFFFFF; --shadow:0 14px 34px rgba(27,42,78,.14); --scrim:rgba(20,26,46,.42);
+  --display:"Unbounded","Nunito",system-ui,sans-serif;
+  --text:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --b-page:#0B1223; --b-bg:#121B33; --b-card:#1C2848; --b-ink:#E7EEFC; --b-soft:#9DB0D6;
+  --b-accent:#7FA6FF; --b-tint:#26355C; --b-line:#2B3A63;
+  --g-page:#1C0C14; --g-bg:#2A121E; --g-card:#3C1D2C; --g-ink:#FCE8EF; --g-soft:#D9A3B8;
+  --g-accent:#FF85B3; --g-tint:#52283B; --g-line:#5A2D41;
+  --on-accent:#141A2E; --shadow:0 14px 34px rgba(0,0,0,.4); --scrim:rgba(0,0,0,.6); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --b-page:#0B1223; --b-bg:#121B33; --b-card:#1C2848; --b-ink:#E7EEFC; --b-soft:#9DB0D6;
+  --b-accent:#7FA6FF; --b-tint:#26355C; --b-line:#2B3A63;
+  --g-page:#1C0C14; --g-bg:#2A121E; --g-card:#3C1D2C; --g-ink:#FCE8EF; --g-soft:#D9A3B8;
+  --g-accent:#FF85B3; --g-tint:#52283B; --g-line:#5A2D41;
+  --on-accent:#141A2E; --shadow:0 14px 34px rgba(0,0,0,.4); --scrim:rgba(0,0,0,.6); color-scheme:dark }
+
+body{ --page:var(--b-page); --bg:var(--b-bg); --card:var(--b-card); --ink:var(--b-ink); --soft:var(--b-soft);
+  --accent:var(--b-accent); --tint:var(--b-tint); --line:var(--b-line); }
+body[data-g="girl"]{ --page:var(--g-page); --bg:var(--g-bg); --card:var(--g-card); --ink:var(--g-ink); --soft:var(--g-soft);
+  --accent:var(--g-accent); --tint:var(--g-tint); --line:var(--g-line); }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--page);color:var(--ink);font-family:var(--text);font-size:16px;font-weight:500;
+  display:flex;justify-content:center;transition:background .3s}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.app{position:relative;width:100%;max-width:430px;height:100%;background:var(--bg);overflow:hidden;
+  display:flex;flex-direction:column;gap:12px;padding-block:14px 10px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  transition:background .3s}
+@media (min-width:600px) and (min-height:720px){
+  body{align-items:center}
+  .app{height:min(100%,844px);border-radius:40px;box-shadow:var(--shadow);border:1px solid var(--line)}
+}
+
+/* header */
+.head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0}
+.brand i{font-style:normal;color:var(--accent)}
+.seg{display:flex;background:var(--tint);border-radius:999px;padding:3px}
+.seg button{padding:7px 13px;border-radius:999px;font-weight:700;font-size:14px;color:var(--soft)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.who{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--soft)}
+.who span{min-width:0}
+
+/* views */
+.view{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.bar{display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--soft);font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:var(--card);
+  color:var(--accent);font-weight:800;font-size:14px}
+.pill svg{width:14px;height:14px}
+
+.stack{flex:1;min-height:0;position:relative}
+.card{position:absolute;inset:0;background:var(--card);border-radius:28px;box-shadow:var(--shadow);overflow:hidden;
+  display:flex;flex-direction:column;padding:24px;transition:transform .25s ease;touch-action:none;user-select:none;-webkit-user-select:none}
+.card.next{transform:scale(.94) translateY(14px);box-shadow:none;opacity:.7}
+.card.top{cursor:grab}
+.wm{position:absolute;right:-18px;top:-46px;font-family:var(--display);font-weight:700;font-size:270px;line-height:1;
+  color:var(--accent);opacity:.09;pointer-events:none}
+.card-main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;position:relative;min-width:0}
+.card h2{font-family:var(--display);font-weight:700;margin:0;letter-spacing:-.02em;line-height:1.05;overflow-wrap:anywhere}
+.fio{margin:0;font-size:19px;font-weight:700;overflow-wrap:anywhere}
+.ini{margin:0;font-size:14px;color:var(--soft)}
+.lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);font-weight:800}
+.forms{position:relative;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.chips li{background:var(--tint);padding:6px 12px;border-radius:999px;font-weight:700;font-size:15px}
+.stamp{position:absolute;top:22px;padding:6px 12px;border-radius:12px;font-weight:800;font-size:15px;opacity:0;
+  border:2.5px solid currentColor;background:var(--card);z-index:2}
+.stamp.yes{left:20px;color:var(--accent);transform:rotate(-8deg)}
+.stamp.no{right:20px;color:var(--soft);transform:rotate(8deg)}
+
+.actions{display:flex;justify-content:center;align-items:center;gap:20px;padding-block:4px}
+.round{display:grid;place-items:center;border-radius:50%;background:var(--card);box-shadow:0 6px 16px rgba(0,0,0,.1);
+  transition:transform .12s}
+.round:active{transform:scale(.92)}
+.round svg{width:44%;height:44%}
+.round.no{width:60px;height:60px;color:var(--soft)}
+.round.undo{width:46px;height:46px;color:var(--soft)}
+.round.yes{width:68px;height:68px;background:var(--accent);color:var(--on-accent)}
+.round:disabled{opacity:.4}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:20px}
+.empty h3{font-family:var(--display);font-size:20px;margin:0;text-wrap:balance}
+.empty p{margin:0;color:var(--soft);max-width:30ch}
+
+/* matches */
+.scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:6px}
+.h{font-family:var(--display);font-size:20px;font-weight:700;margin:0}
+.sub{margin:0;color:var(--soft);font-size:14px}
+.m{background:var(--card);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.m-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.m b{font-family:var(--display);font-size:20px;font-weight:700}
+.m .rm{font-size:13px;color:var(--soft);font-weight:700;text-decoration:underline;padding:4px}
+.m p{margin:0;font-size:14px;color:var(--soft)}
+.m .full{color:var(--ink);font-weight:700;font-size:15px}
+
+/* form */
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.sets{display:flex;flex-direction:column;gap:6px}
+.sets button{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px 14px;font-weight:700;text-align:left}
+.sets button i{flex:none;width:22px;height:22px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:14px;color:var(--on-accent)}
+.sets button[aria-pressed="true"] i{background:var(--accent);border-color:var(--accent)}
+.sets button span{flex:1}
+.sets button em{font-style:normal;color:var(--soft);font-size:14px;font-variant-numeric:tabular-nums}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field label,.flabel{font-weight:800;font-size:14px}
+.field .seg{align-self:flex-start}
+.seg-wide button{padding:9px 20px}
+.field small{color:var(--soft);font-size:13px}
+input[type=text]{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;font-weight:700;width:100%}
+.preview{background:var(--card);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.preview p{margin:0;font-weight:700;overflow-wrap:anywhere}
+.btn{background:var(--accent);color:var(--on-accent);border-radius:16px;padding:14px;font-weight:800;font-size:16px;text-align:center}
+.btn.ghost{background:transparent;color:var(--soft);font-size:14px;padding:10px;text-decoration:underline}
+.btn:disabled{opacity:.45}
+.note{background:var(--tint);border-radius:14px;padding:10px 14px;font-size:14px;margin:0}
+.err{color:var(--accent);font-weight:800;font-size:14px;margin:0;min-height:1.3em}
+
+/* tabs */
+.tabs{display:flex;background:var(--card);border-radius:20px;padding:4px}
+.tabs button{flex:1;padding:10px 4px;border-radius:16px;font-weight:800;font-size:14px;color:var(--soft)}
+.tabs button[aria-pressed="true"]{background:var(--tint);color:var(--ink)}
+.badge{display:inline-block;min-width:20px;padding:1px 6px;margin-left:4px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:12px}
+
+/* overlays */
+.overlay{position:absolute;inset:0;z-index:20;display:flex;background:var(--scrim)}
+.sheet{margin-top:auto;width:100%;background:var(--bg);border-radius:28px 28px 0 0;padding:22px 20px 26px;display:flex;flex-direction:column;gap:12px}
+.match{align-items:center;justify-content:center;background:var(--accent);color:var(--on-accent);flex-direction:column;text-align:center;gap:10px;padding:28px}
+.match .heart{width:84px;height:84px;animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
+.match .big{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;margin:0}
+.match .nm{font-family:var(--display);font-weight:700;font-size:46px;margin:6px 0 0;line-height:1.05;overflow-wrap:anywhere;animation:rise .5s .15s both}
+.match p{margin:0;font-weight:700}
+.match .btn{background:var(--card);color:var(--ink);padding:14px 30px;margin-top:18px}
+.match .btn.ghost{background:transparent;color:var(--on-accent);margin-top:0}
+@keyframes pop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.toast{position:absolute;left:16px;right:16px;bottom:84px;z-index:30;background:var(--ink);color:var(--bg);border-radius:14px;
+  padding:12px 14px;font-weight:700;font-size:14px;text-align:center}
+@media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
+</style>
+
+<div class="app" id="app">
+  <header class="head">
+    <h1 class="brand">Наше <i>имя</i></h1>
+  </header>
+
+  <div class="who" id="who">
+    <span>Прототип: кто сейчас свайпает</span>
+    <div class="seg" id="seg-p" role="group" aria-label="Кто свайпает">
+      <button type="button" data-p="0"></button>
+      <button type="button" data-p="1"></button>
+    </div>
+  </div>
+
+  <!-- Анкета -->
+  <section class="view" id="v-form" hidden>
+    <form class="scroll" id="form" novalidate>
+      <h2 class="h">Настройки</h2>
+      <div class="field">
+        <span class="flabel" id="g-label">Кого ждём</span>
+        <div class="seg" id="seg-g" role="group" aria-labelledby="g-label">
+          <button type="button" data-g="boy">Мальчик</button>
+          <button type="button" data-g="girl">Девочка</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="flabel">Наборы имён</span>
+        <div class="sets" id="sets"></div>
+        <small>Выключенный набор не выпадает в колоде. Мэтчи и ваши лайки не пропадают.</small>
+      </div>
+      <p class="note" id="invite-note" hidden></p>
+      <p class="note" id="ex-note">Сейчас подставлен пример. Замените на свои данные.</p>
+      <div class="field">
+        <label for="f-sur">Фамилия ребёнка</label>
+        <input type="text" id="f-sur" autocomplete="off" maxlength="30">
+        <small>Пишите в мужской форме. Для девочки изменим сами.</small>
+      </div>
+      <div class="two">
+        <div class="field">
+          <label for="f-dad">Имя папы</label>
+          <input type="text" id="f-dad" autocomplete="off" maxlength="20">
+        </div>
+        <div class="field">
+          <label for="f-mom">Имя мамы</label>
+          <input type="text" id="f-mom" autocomplete="off" maxlength="20">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-patr">Отчество для мальчика</label>
+        <input type="text" id="f-patr" autocomplete="off" maxlength="30">
+        <small>Составили сами по имени папы. Поправьте, если нужно.</small>
+      </div>
+      <div class="preview">
+        <span class="lbl">Так будет на карточке</span>
+        <p id="pv-boy"></p>
+        <p id="pv-girl"></p>
+      </div>
+      <p class="err" id="f-err" role="alert"></p>
+      <button class="btn" type="submit" id="f-save">Начать выбирать</button>
+      <button class="btn ghost" type="button" id="f-reset">Сбросить все свайпы и свои имена</button>
+    </form>
+  </section>
+
+  <!-- Вход и служебный экран (только версия на сервере) -->
+  <section class="view" id="v-join" hidden>
+    <div class="scroll">
+      <h2 class="h">Добро пожаловать</h2>
+      <p class="sub">Здесь двое выбирают имя малышу. У каждой пары своя комната.</p>
+      <div class="field" id="j-code-f">
+        <label for="j-code">Код приглашения</label>
+        <input type="text" id="j-code" autocomplete="off" autocapitalize="characters" maxlength="12" placeholder="Если вас пригласили">
+        <small>Вы первый из пары? Оставьте поле пустым: создадим вашу комнату и дадим код для второго.</small>
+      </div>
+      <span class="flabel">Кто вы?</span>
+      <button class="btn" type="button" data-role="0" id="j-0">Я папа</button>
+      <button class="btn" type="button" data-role="1" id="j-1">Я мама</button>
+      <p class="err" id="j-err" role="alert"></p>
+    </div>
+  </section>
+  <section class="view" id="v-fatal">
+    <div class="empty"><h3 id="fatal-text">Загружаем…</h3></div>
+  </section>
+
+  <!-- Колода -->
+  <section class="view" id="v-deck" hidden>
+    <div class="bar">
+      <span id="left"></span>
+      <button class="pill" type="button" id="add-open">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Своё имя
+      </button>
+    </div>
+    <div class="stack" id="stack"></div>
+    <div class="actions">
+      <button class="round no" type="button" id="b-no" aria-label="Не нравится">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <button class="round undo" type="button" id="b-undo" aria-label="Вернуть предыдущее имя">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12h-2" transform="translate(0,-5)"/></svg>
+      </button>
+      <button class="round yes" type="button" id="b-yes" aria-label="Нравится">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.100 3 4.500 6.600 4.500c2.100 0 3.800 1.100 5.400 3.200 1.600-2.100 3.300-3.200 5.400-3.200 3.600 0 5.700 3.600 4.200 7.100C19.500 16.400 12 21 12 21z"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- Мэтчи -->
+  <section class="view" id="v-matches" hidden>
+    <div>
+      <h2 class="h">Мэтчи</h2>
+      <p class="sub" id="m-sub"></p>
+    </div>
+    <div class="scroll" id="m-list"></div>
+  </section>
+
+  <nav class="tabs" id="tabs" aria-label="Разделы">
+    <button type="button" data-v="deck">Имена</button>
+    <button type="button" data-v="matches">Мэтчи<span class="badge" id="badge" hidden></span></button>
+    <button type="button" data-v="form">Настройки</button>
+  </nav>
+
+  <!-- Добавить имя -->
+  <div class="overlay" id="add" hidden>
+    <form class="sheet" id="add-form" novalidate>
+      <h2 class="h">Добавить своё имя</h2>
+      <div class="field">
+        <label for="add-name" id="add-label"></label>
+        <input type="text" id="add-name" autocomplete="off" maxlength="24" placeholder="Например, Добрыня">
+      </div>
+      <p class="err" id="add-err" role="alert"></p>
+      <button class="btn" type="submit">Добавить</button>
+      <button class="btn ghost" type="button" id="add-close">Отмена</button>
+    </form>
+  </div>
+
+  <!-- Мэтч -->
+  <div class="overlay match" id="match" hidden>
+    <svg class="heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.100 3 4.500 6.600 4.500c2.100 0 3.800 1.100 5.400 3.200 1.600-2.100 3.300-3.200 5.400-3.200 3.600 0 5.700 3.600 4.200 7.100C19.500 16.400 12 21 12 21z"/></svg>
+    <p class="big">Это мэтч!</p>
+    <p id="match-who"></p>
+    <p class="nm" id="match-name"></p>
+    <p id="match-fio"></p>
+    <button class="btn" type="button" id="match-next">Дальше</button>
+    <button class="btn ghost" type="button" id="match-open">Открыть мэтчи</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+/*SHARED-BEGIN*/
+const Core = (() => {
+const RAW = {
+boy: `Александр|Саша,Саня,Шура,Алекс|r
+Алексей|Лёша,Алёша,Лёха|r
+Анатолий|Толя,Толик|r
+Андрей|Андрюша,Дюша|r
+Антон|Антоша,Тоша|r
+Аркадий|Аркаша|r
+Арсений|Сеня,Арсюша|r
+Артём|Тёма,Тёмка|r
+Артур|Артурчик|i
+Богдан|Богдаша|r
+Борис|Боря|r
+Вадим|Вадик|r
+Валентин|Валя,Валик|r
+Валерий|Валера|r
+Василий|Вася,Васёк|r
+Вениамин|Веня|o
+Виктор|Витя|r
+Виталий|Виталик|r
+Владимир|Вова,Володя|r
+Владислав|Влад,Владик|r
+Всеволод|Сева|o
+Вячеслав|Слава,Славик|r
+Геннадий|Гена|r
+Георгий|Жора,Гера,Гоша|r
+Герман|Гера|r
+Глеб|Глебушка|r
+Григорий|Гриша|r
+Давид|Дава,Давыд|i
+Даниил|Даня,Данька|r
+Данила|Даня|r
+Денис|Дэн,Дениска|r
+Дмитрий|Дима,Митя|r
+Евгений|Женя,Жека|r
+Егор|Егорка|r
+Захар|Захарка|o
+Иван|Ваня,Ванечка,Ванюша|r
+Игорь|Игорёк,Гарик|r
+Илья|Илюша,Илюха|r
+Иннокентий|Кеша|o
+Кирилл|Кирюша,Кир|r
+Константин|Костя,Костик|r
+Лев|Лёва,Лёвушка|r
+Леонид|Лёня|r
+Макар|Макарка|o
+Максим|Макс,Максик|r
+Марк|Маркуша,Марик|r
+Матвей|Мотя,Матвейка|r
+Михаил|Миша,Мишка,Мишаня|r
+Никита|Ник,Никитка|r
+Николай|Коля,Николаша|r
+Олег|Олежка|r
+Павел|Паша,Павлик|r
+Пётр|Петя,Петруша|r
+Роман|Рома,Ромка|r
+Руслан|Русик|r
+Семён|Сёма|r
+Сергей|Серёжа,Серёга|r
+Станислав|Стас,Стасик|r
+Степан|Стёпа,Стёпка|r
+Тимофей|Тима,Тимоша|r
+Тимур|Тимурчик,Тим|r
+Фёдор|Федя|r
+Филипп|Филя,Фил|r
+Эдуард|Эдик|i
+Юрий|Юра|r
+Яков|Яша|r
+Ярослав|Ярик|r
+Мирон|Мироша|o
+Платон|Платоша|o
+Савелий|Сава|o
+Святослав|Свят|o
+Тихон|Тиша|o
+Демид|Дёма|o
+Елисей|Еся,Лис|o
+Ян|Яник|i
+Эмиль|Эмилька|i
+Леон|Лео|i
+Роберт|Роб,Робик|i
+Родион|Родя|o
+Ростислав|Ростик|o
+Мирослав|Мирик|o
+Добрыня|Добрыша|o
+Савва|Саввушка|o
+Назар|Назарка|o
+Прохор|Проша|o
+Лука|Лукаша|o
+Фома|Фомка|o
+Кузьма|Кузя|o
+Игнат|Игнаша|o
+Остап|Ося|o
+Потап|Потапка|o
+Трофим|Троша|o
+Ефим|Фима|o
+Нестор||o
+Лавр|Лаврик|o
+Лаврентий|Лаврик|o
+Клим|Климка|o
+Климент|Клим|o
+Тарас|Тарасик|o
+Архип|Архипка|o
+Аристарх|Арик|o
+Афанасий|Афоня|o
+Велимир|Веля|o
+Владлен|Владик|o
+Влас|Власик|o
+Гордей|Гордя|o
+Данияр|Даник|e
+Дементий|Дёма|o
+Евсей|Евся|o
+Елизар|Елизарка|o
+Емельян|Емеля|o
+Еремей|Ерёма|o
+Ермолай|Ермоша|o
+Ефрем|Ефремка|o
+Илларион|Ларик|o
+Казимир|Казик|i
+Корней|Корнейка|o
+Лазарь|Лазарик|o
+Любомир|Любик|o
+Мартин|Мартик|i
+Милан|Милаш|i
+Никодим|Никоша|o
+Пантелей|Пантюша|o
+Радимир|Радик|o
+Радомир|Радик|o
+Ратмир|Ратик|o
+Светозар|Светик|o
+Севастьян|Сева|o
+Серафим|Сима|o
+Спартак||o
+Стефан|Стефик|i
+Устин|Устя|o
+Фаддей|Фадя|o
+Федот|Федя|o
+Феликс|Феля|i
+Харитон|Харитоша|o
+Юлиан|Юлик|i
+Ярополк|Ярик|o
+Яромир|Ярик|o
+Аким|Акимка|o
+Авдей|Авдюша|o
+Август||i
+Адриан|Адрик|i
+Артемий|Тёма,Артёмка|o
+Борислав|Боря,Слава|o
+Бронислав|Броня|o
+Венедикт|Веня|o
+Викентий|Кеша|o
+Витольд|Витя|i
+Гавриил|Гаврюша|o
+Герасим|Гера|o
+Игнатий|Игнат,Игнаша|o
+Кондрат|Кондраша|o
+Леонтий|Лёня|o
+Максимилиан|Макс,Милиан|i
+Марат|Маратик|e
+Марсель|Марсик|i
+Мстислав|Слава,Мстиша|o
+Наум|Наумка|o
+Олесь|Лесь|o
+Осип|Ося|o
+Рафаил|Рафа|i
+Ренат|Ренатик|e
+Рустам|Рустик|e
+Самуил|Самик|i
+Святогор|Свят|o
+Соломон||i
+Фрол|Фролка|o
+Эрнест|Эрни|i
+Юлий|Юлик|o
+Адам|Адамчик|i
+Алан|Алик|i
+Альберт|Алик,Берт|i
+Альфред|Фред,Алик|i
+Амир|Амирчик|e
+Арман||e
+Арнольд|Арни|i
+Арсен|Арсик|e
+Бенедикт|Бен|i
+Бруно||i
+Вальтер||i
+Винсент|Винс|i
+Габриэль|Габи|i
+Гарри||i
+Генрих|Генри|i
+Густав|Густик|i
+Дамир|Дамирчик|e
+Даниэль|Дэн,Даня|i
+Дарий|Дарик|i
+Демьян|Дёма|o
+Доминик|Дом,Ник|i
+Жан||i
+Камиль||e
+Карл|Карлуша|i
+Кай||i
+Каспер|Кас|i
+Кристиан|Крис|i
+Конрад|Кон|i
+Леонард|Лео,Лёня|i
+Лиам||i
+Лукас|Люк|i
+Луи||i
+Людвиг||i
+Маркус|Марк|i
+Матиас|Мати|i
+Микаэль|Мика|i
+Милош||i
+Натан|Нат,Натанчик|i
+Николас|Ник|i
+Ной||i
+Оливер|Олли|i
+Оскар||i
+Отто||i
+Патрик|Пат|i
+Рафаэль|Рафа|i
+Ричард|Рич|i
+Робин|Роб|i
+Рональд|Рон|i
+Рудольф|Руди|i
+Самир||e
+Самсон||i
+Себастьян|Себа,Бастиан|i
+Симон|Сима|i
+Тео||i
+Теодор|Тео,Тедди|i
+Тигран|Тигр|e
+Томас|Том|i
+Тристан|Трис|i
+Флориан|Флор|i
+Франц||i
+Фредерик|Фред|i
+Эдвард|Эд,Эдди|i
+Эдгар|Эд|i
+Эдмунд|Эд|i
+Элиас|Эли|i
+Эльдар||e
+Эмир||e
+Эрик||i
+Янис|Ян|i
+Алишер|Алик|e
+Арслан||e
+Аскар||e
+Булат||e
+Ильдар||e
+Ильяс||e
+Карим||e
+Малик||e
+Мурат||e
+Рамиль||e
+Ринат||e
+Рашид||e
+Тагир||e
+Тамерлан|Тамик|e
+Арам||e
+Армен||e
+Левон|Лёва|e`,
+girl: `Александра|Саша,Шура,Аля|r
+Алёна|Алёнка|r
+Алина|Аля,Алинка|r
+Алиса|Лиса|r
+Алла|Аллочка|r
+Анастасия|Настя,Ася,Стася|r
+Ангелина|Геля,Лина|r
+Анна|Аня,Анечка,Анюта,Нюша|r
+Антонина|Тоня|r
+Арина|Ариша|r
+Валентина|Валя|r
+Валерия|Лера|r
+Варвара|Варя,Варенька|r
+Василиса|Вася,Васёна|o
+Вера|Верочка|r
+Вероника|Ника|r
+Виктория|Вика,Вики|r
+Галина|Галя|r
+Дарья|Даша,Дашенька|r
+Диана|Ди,Дианка|r
+Ева|Евочка|r
+Евгения|Женя|r
+Екатерина|Катя,Катюша|r
+Елена|Лена|r
+Елизавета|Лиза,Лизонька|r
+Жанна|Жанночка|r
+Зоя|Зоечка|r
+Инна|Инночка|r
+Ирина|Ира,Ириша|r
+Карина|Кариша|r
+Кира|Кирочка|r
+Кристина|Кристя,Крис|r
+Ксения|Ксюша,Ксеня|r
+Лариса|Лара|r
+Лидия|Лида|r
+Лилия|Лиля|r
+Любовь|Люба|r
+Людмила|Люда,Люся|r
+Маргарита|Рита,Марго|r
+Марина|Мариша|r
+Мария|Маша,Маня,Маруся|r
+Милана|Милаша|r
+Надежда|Надя|r
+Наталья|Наташа,Ната|r
+Нина|Ниночка|r
+Оксана|Ксана,Окси|r
+Олеся|Леся|r
+Ольга|Оля,Оленька|r
+Полина|Поля,Полинка|r
+Светлана|Света|r
+София|Соня,Софа,Софи,Софья|r
+Таисия|Тася,Тая|r
+Тамара|Тома|r
+Татьяна|Таня,Танюша|r
+Ульяна|Уля|r
+Юлия|Юля|r
+Яна|Яночка|r
+Злата|Златочка|o
+Майя|Маечка|r
+Мирослава|Мира,Слава|o
+Ярослава|Яра,Слава|o
+Есения|Еся,Сеня|o
+Стефания|Стеша,Стефа|i
+Эмилия|Эми,Миля|i
+Амелия|Амели,Меля|i
+Мия|Миечка|i
+Николь|Ники|i
+Агата|Агаша|o
+Аглая|Глаша|o
+Серафима|Сима,Фима|o
+Марьяна|Марьяша|o
+Мелания|Мела,Меланья|o
+Аделина|Ада,Лина|i
+Камила|Кама,Камилла|i
+Оливия|Лив|i
+Авдотья|Дуня|o
+Агния|Агуша,Ася|o
+Агафья|Агаша,Гаша|o
+Аксинья|Ксюша,Ксана|o
+Акулина|Акуля,Лина|o
+Алевтина|Аля,Тина|o
+Анфиса|Фиса,Анфиска|o
+Аполлинария|Поля,Полина|o
+Ариадна|Ада,Ариша|o
+Божена|Божа|o
+Бронислава|Броня|o
+Василина|Вася,Лина|o
+Веселина|Веся|o
+Влада|Владочка|o
+Владислава|Влада,Слава|o
+Глафира|Глаша|o
+Дарина|Дара,Даша|o
+Доминика|Ника,Мика|i
+Евдокия|Дуня,Дуся|o
+Евангелина|Ева,Геля,Лина|i
+Ефросинья|Фрося|o
+Забава||o
+Зарина|Зара|e
+Зинаида|Зина|o
+Зоряна|Зоря|o
+Ива|Ивушка|o
+Иванна|Ива,Ванечка|o
+Изабелла|Белла,Иза|i
+Инга||i
+Инесса|Несси,Инна|i
+Ия||o
+Калерия|Лера|o
+Капитолина|Капа,Лина|o
+Каролина|Кара,Лина|i
+Клавдия|Клава|o
+Клара|Кларочка|i
+Лада|Ладушка|o
+Лукерья|Луша|o
+Любава|Люба|o
+Магдалина|Магда,Лина|i
+Марфа|Марфуша|o
+Матрёна|Матрёша,Мотя|o
+Милена|Мила,Лена|o
+Милослава|Мила,Слава|o
+Мила|Милочка|r
+Мира|Мирочка|r
+Нелли|Неля|i
+Ника||i
+Нонна||i
+Олимпиада|Липа|o
+Пелагея|Поля|o
+Прасковья|Паша|o
+Рада|Радочка|o
+Радмила|Рада,Мила|o
+Раиса|Рая|o
+Регина|Рина|i
+Римма||o
+Роза|Розочка|i
+Розалия|Роза,Лия|i
+Руслана|Руся|o
+Сабина|Саби|i
+Святослава|Слава,Свята|o
+Снежана|Снежа|o
+Станислава|Стася,Слава|o
+Устинья|Устя|o
+Фаина|Фая|o
+Фёкла||o
+Федора|Дора|o
+Элеонора|Эля,Нора|i
+Эльвира|Эля|i
+Юлиана|Юля,Лиана|i
+Юнона|Юна|i
+Ярина|Яра|o
+Ясмина|Яся,Ясмин|e
+Августа|Густя,Ава|o
+Агнесса|Агнес,Несси|i
+Аида||e
+Альбина|Аля|i
+Анжелика|Лика,Анжела|i
+Анжела||i
+Ариана|Ари|i
+Аэлита|Эля,Лита|i
+Белла||i
+Берта||i
+Богдана|Дана,Богданка|o
+Ванда||i
+Венера||i
+Веста||i
+Вилена|Лена|i
+Виолетта|Вита,Виола|i
+Вита||i
+Виталина|Вита,Лина|i
+Дана||i
+Даниэла|Дана,Элла|i
+Джулия|Джули|i
+Дина||i
+Жасмин|Жася|e
+Зара||e
+Земфира||e
+Илона||i
+Ирма||i
+Кармен||i
+Катарина|Катя,Рина|i
+Лана||i
+Лаура|Лора|i
+Лея||i
+Лиана|Лия|i
+Лилиана|Лиля,Лиана|i
+Лина||i
+Линда||i
+Лия||i
+Лола||i
+Лолита|Лола|i
+Луиза|Лу|i
+Марианна|Мари|i
+Марта|Мартуся|i
+Мартина|Тина|i
+Матильда|Мотя,Тильда|i
+Мелисса|Мел,Лисса|i
+Мишель|Шелли|i
+Моника|Мона|i
+Натали|Ната|i
+Нора||i
+Офелия|Феля|i
+Патриция|Пат,Триша|i
+Паула||i
+Рената|Рена,Ната|i
+Роксана|Рокси,Ксана|i
+Сара||i
+Селена|Лена|i
+Симона|Сима|i
+Стелла||i
+Сусанна|Сана|i
+Тереза|Тесса|i
+Тея||i
+Тина||i
+Урсула||i
+Флора||i
+Фрида||i
+Ханна||i
+Хлоя||i
+Шарлотта|Лотта,Шарли|i
+Эвелина|Эва,Лина|i
+Эдита||i
+Элиза|Эли,Лиза|i
+Элина|Эля,Лина|i
+Элла||i
+Эльза||i
+Эмма||i
+Эрика||i
+Эстер||i
+Юна||i
+Юстина|Юся|i
+Ядвига|Ядя|i
+Янина|Яна,Нина|i
+Амина|Ами|e
+Алия|Аля|e
+Асия|Ася|e
+Гульнара|Гуля|e
+Диляра|Диля|e
+Динара|Дина|e
+Лейла||e
+Мадина||e
+Малика||e
+Марьям|Мариам|e
+Наиля||e
+Самира||e
+Сафия|Сафи|e
+Тамила|Тома,Мила|e
+Фатима||e
+Эльмира|Эля,Мира|e
+Нино||e
+Кетеван|Кети|e
+Ануш||e
+Гаянэ|Гая|e
+Нателла|Ната|e
+Виринея|Вира|o
+Дарёна|Даша|o
+Милица|Мила|o
+Соломия|Соля,Мия|o
+Христина|Христя|o
+Ефимия|Фима|o
+Павла|Паша|o
+Павлина|Павла,Лина|o
+Феврония|Феня|o
+Алеся|Леся|o
+Алисия|Алиса,Лиса|i
+Амалия|Маля,Амаля|i
+Анита|Ани|i
+Анисья|Анися|o
+Ассоль|Ася|i
+Беата||i
+Виола||i
+Габриэлла|Габи,Элла|i
+Грета||i
+Иветта|Ива,Вета|i
+Изольда|Иза|i
+Лика||i
+Мальвина|Маля|i
+Миранда|Мира|i
+Мирра||i
+Наоми||i
+Николетта|Ники|i
+Пенелопа|Пенни|i
+Рахиль||i
+Ребекка|Бекки|i
+Руфина|Руфа|o
+Сабрина|Саби|i
+Северина|Сева,Рина|i
+Сильвия|Сильва|i
+Цветана|Цвета|o
+Эвита|Эва|i`
+};
+const BASE = {};
+for (const g in RAW) BASE[g] = RAW[g].split('\n').map(l => { const [n, f, t] = l.trim().split('|'); return { n, f: f ? f.split(',') : [], s: t }; });
+
+/* ---------- текст: формы имён ---------- */
+const norm = s => String(s).trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+const cap = s => String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ').replace(/(^|[\s-])([а-яёa-z])/g, (m, a, b) => a + b.toUpperCase());
+const PATR_EX = { 'павел': 'Павлович', 'лев': 'Львович', 'петр': 'Петрович', 'михаил': 'Михайлович', 'яков': 'Яковлевич',
+  'илья': 'Ильич', 'никита': 'Никитич', 'лука': 'Лукич', 'фома': 'Фомич', 'кузьма': 'Кузьмич',
+  'дмитрий': 'Дмитриевич', 'георгий': 'Георгиевич' };
+function patronymic(name) {
+  const n = cap(name); if (!n) return '';
+  const k = norm(n);
+  if (PATR_EX[k]) return PATR_EX[k];
+  if (/ий$/.test(k)) return n.slice(0, -2) + 'ьевич';
+  if (/[йь]$/.test(k)) return n.slice(0, -1) + 'евич';
+  if (/[ая]$/.test(k)) return n.slice(0, -1) + 'ич';
+  if (/[жшчщц]$/.test(k)) return n + 'евич';
+  return n + 'ович';
+}
+const PATR_F = { 'ильич': 'Ильинична', 'лукич': 'Лукинична', 'фомич': 'Фоминична', 'кузьмич': 'Кузьминична' };
+function femPatr(p) {
+  const k = norm(p);
+  if (PATR_F[k]) return PATR_F[k];
+  if (/ович$/.test(k)) return p.slice(0, -4) + 'овна';
+  if (/евич$/.test(k)) return p.slice(0, -4) + 'евна';
+  if (/ич$/.test(k)) return p.slice(0, -2) + 'ична';
+  return p;
+}
+function femSurname(s) {
+  const k = norm(s);
+  if (/(ов|ев|ин|ын)$/.test(k)) return s + 'а';
+  if (/(ский|цкий)$/.test(k)) return s.slice(0, -2) + 'ая';
+  if (/(ой|ый)$/.test(k)) return s.slice(0, -2) + 'ая';
+  return s;
+}
+
+/* ---------- общее состояние пары и действия над ним ---------- */
+const SETS = { r: 'Привычные русские', o: 'Редкие и старинные', i: 'Международные', e: 'Восточные и кавказские' };
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function mk(g) { const names = BASE[g].map(e => e.n); return { custom: [], votes: [{}, {}], order: [shuffle(names), shuffle(names)], hist: [[], []], r2: null, finals: null }; }
+function fresh() {
+  return { profile: { surname: 'Иванов', dad: 'Андрей', patr: 'Андреевич', mom: 'Окси', example: true },
+    g: 'boy', sets: { r: 1, o: 1, i: 1, e: 1 }, d: { boy: mk('boy'), girl: mk('girl') } };
+}
+function migrate(S) {
+  if (!S.sets) S.sets = { r: 1, o: 1, i: 1, e: 1 };
+  if (S.sets.e === undefined) S.sets.e = 1;
+  for (const g in BASE) {
+    const D = S.d[g], names = BASE[g].map(e => e.n).concat((D.custom || []).map(e => { e.c = 1; return e.n; }));
+    D.order.forEach((o, p) => { const has = new Set(o), add = shuffle(names.filter(n => !has.has(n))); if (add.length) D.order[p] = o.concat(add); });
+  }
+  return S;
+}
+const all = (S, g) => BASE[g].concat(S.d[g].custom);
+const entry = (S, g, n) => all(S, g).find(e => e.n === n);
+function r2q(S, p) {
+  const r = S.d[S.g].r2; if (!r) return null;
+  const q = r.order[p].filter(n => !(n in r.votes[p]));
+  return q.length ? q : null;
+}
+function queue(S, p) {
+  const rq = r2q(S, p); if (rq) return rq;
+  const D = S.d[S.g], v = D.votes[p], names = all(S, S.g).filter(e => !e.s || S.sets[e.s]).map(e => e.n), set = new Set(names);
+  const ord = D.order[p].filter(n => set.has(n)), seen = new Set(ord);
+  names.forEach(n => { if (!seen.has(n)) ord.push(n); });
+  return ord.filter(n => !(n in v));
+}
+const matches = (S, g) => all(S, g).filter(e => S.d[g].votes[0][e.n] === 1 && S.d[g].votes[1][e.n] === 1);
+function findDup(S, g, input) {
+  const x = norm(input);
+  for (const e of all(S, g)) if (norm(e.n) === x) return { e, via: null };
+  for (const e of all(S, g)) for (const f of e.f) if (norm(f) === x) return { e, via: f };
+  return null;
+}
+/* Единственное место, где меняется состояние. p: 0 — папа, 1 — мама. */
+function apply(S, p, a) {
+  const g = a.g === 'girl' ? 'girl' : a.g === 'boy' ? 'boy' : S.g, D = S.d[g], ev = {}, ok = { ok: 1, ev };
+  switch (a.t) {
+    case 'vote': {
+      const n = String(a.n), like = a.like ? 1 : 0;
+      if (a.r2) {
+        const r = D.r2; if (!r || !r.names.includes(n) || (n in r.votes[p])) return ok;
+        r.votes[p][n] = like; r.hist[p].push(n);
+        const done = q => r.names.every(x => x in r.votes[q]);
+        if (done(0) && done(1)) { D.finals = r.names.filter(x => r.votes[0][x] === 1 && r.votes[1][x] === 1); D.r2 = null; ev.r2done = D.finals.length; }
+        else if (done(p)) ev.r2mine = 1;
+        return ok;
+      }
+      if (!entry(S, g, n) || (n in D.votes[p])) return ok;
+      D.votes[p][n] = like; D.hist[p].push(n);
+      return ok;
+    }
+    case 'undo': {
+      if (a.r2) { const r = D.r2; if (r) { const x = r.hist[p].pop(); if (x) delete r.votes[p][x]; } }
+      else { const n = D.hist[p].pop(); if (n) delete D.votes[p][n]; }
+      return ok;
+    }
+    case 'add': {
+      const raw = String(a.name == null ? '' : a.name);
+      if (!/^\s*[а-яёa-z][а-яёa-z\s-]{1,23}\s*$/i.test(raw)) return { err: 'Введите имя буквами, минимум две.' };
+      if (D.custom.length >= 200) return { err: 'Слишком много своих имён.' };
+      const n = cap(raw), dup = findDup(S, g, n);
+      if (dup) return { err: dup.via ? `Такое имя уже есть в списке: ${dup.via} это ${dup.e.n}.` : 'Такое имя уже есть в списке.' };
+      const o = D.order[1 - p];
+      D.custom.push({ n, f: [], c: 1 }); D.votes[p][n] = 1; D.order[p].push(n);
+      let i = o.findIndex(x => !(x in D.votes[1 - p])); if (i < 0) i = o.length;
+      o.splice(i + Math.floor(Math.random() * 4), 0, n);
+      ev.added = n; return ok;
+    }
+    case 'unmatch': { const n = String(a.n); if (entry(S, g, n)) D.votes[p][n] = 0; return ok; }
+    case 'r2start': {
+      if (D.r2) return ok;
+      const ms = matches(S, g).map(x => x.n), fin = (D.finals || []).filter(n => ms.includes(n)), pool = fin.length >= 2 ? fin : ms;
+      if (pool.length < 2) return { err: 'Для второго круга нужно минимум два мэтча.' };
+      D.r2 = { names: pool, votes: [{}, {}], order: [shuffle(pool), shuffle(pool)], hist: [[], []] };
+      ev.r2start = pool.length; return ok;
+    }
+    case 'r2cancel': D.r2 = null; return ok;
+    case 'r2clear': D.finals = null; return ok;
+    case 'profile': {
+      const f = k => cap(a[k]).slice(0, 30), P = { surname: f('surname'), dad: f('dad'), patr: f('patr'), mom: f('mom'), example: false };
+      if (!P.surname || !P.dad || !P.patr || !P.mom) return { err: 'Заполните все четыре поля.' };
+      S.profile = P; return ok;
+    }
+    case 'setg': S.g = a.g === 'girl' ? 'girl' : 'boy'; return ok;
+    case 'sets': {
+      if (!(a.k in SETS)) return { err: 'Нет такого набора.' };
+      if (!a.on && S.sets[a.k] && Object.keys(SETS).filter(k => S.sets[k]).length === 1) return { err: 'Хотя бы один набор должен быть включён' };
+      S.sets[a.k] = a.on ? 1 : 0; return ok;
+    }
+    case 'reset': S.d = { boy: mk('boy'), girl: mk('girl') }; return ok;
+  }
+  return { err: 'Неизвестное действие.' };
+}
+return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply };
+})();
+/*SHARED-END*/
+</script>
+<script>
+const { BASE, SETS, cap, patronymic, femPatr, femSurname } = Core;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LS = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- где мы запущены ----------
+   REMOTE = страница открыта с нашего сервера (Telegram): состояние общее, лежит на сервере.
+   Иначе — прототип: всё хранится в этом браузере, оба игрока на одном экране. */
+const tg = window.Telegram && window.Telegram.WebApp;
+const initData = (tg && tg.initData) || '';
+let dev = ''; try { dev = new URLSearchParams(location.search).get('dev') || ''; } catch (e) {}
+let S = null, REMOTE = false, V = 0, INVITE = null, JOIN = null, FATAL = '', pending = 0, chain = Promise.resolve();
+let U = LS.get('nashe-imya-ui') || { view: 'form', p: 0 };
+let SEEN = LS.get('nashe-imya-seen') || { boy: [], girl: [] };
+const saveU = () => LS.set('nashe-imya-ui', U);
+const saveLocal = () => { if (!REMOTE) LS.set('nashe-imya-v1', S); };
+
+async function api(method, url, body) {
+  const r = await fetch(url, { method, cache: 'no-store',
+    headers: { 'Content-Type': 'application/json', 'X-Tg-Init': initData, 'X-Dev-User': dev },
+    body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) { FATAL = 'Не получилось войти. Закройте приложение и откройте его заново из Telegram.'; render(); throw new Error('auth'); }
+  return r.json();
+}
+function take(resp, fromPoll) {
+  if (resp.joined === false) { JOIN = resp; S = null; render(); return; }
+  if (!resp.state) return;
+  const had = !!(S && S.d[S.g].r2);
+  JOIN = null; S = resp.state; V = resp.v; INVITE = resp.invite || null; U.p = resp.p;
+  if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает второй круг: ${S.d[S.g].r2.names.length} имён.`);
+  render();
+}
+function send(a) {
+  pending++;
+  chain = chain.then(() => api('POST', 'api/act', { a })).then(resp => { pending--; if (pending === 0) take(resp); return resp; },
+    () => { pending--; if (!FATAL) { toast('Нет связи. Проверьте интернет.'); api('GET', 'api/state').then(r => take(r)).catch(() => {}); } return { err: 'Нет связи. Попробуйте ещё раз.' }; });
+  return chain;
+}
+/* быстрые действия (свайп, отмена): сразу меняем экран, серверу отправляем следом */
+function actNow(a) { const r = Core.apply(S, U.p, a); if (REMOTE) send(a); else saveLocal(); return r; }
+/* остальные действия: в общем режиме ждём ответ сервера */
+async function actWait(a) {
+  if (!REMOTE) { const r = Core.apply(S, U.p, a); saveLocal(); render(); return r; }
+  const r = await send(a); render(); return r;
+}
+
+/* ---------- данные для экрана ---------- */
+const players = () => [S.profile.dad || 'Папа', S.profile.mom || 'Мама'];
+const queue = () => Core.queue(S, U.p);
+const r2q = () => Core.r2q(S, U.p);
+const matches = g => Core.matches(S, g);
+function fio(g, n) {
+  const P = S.profile;
+  return g === 'boy' ? `${P.surname} ${n} ${P.patr}` : `${femSurname(P.surname)} ${n} ${femPatr(P.patr)}`;
+}
+function initials(g, n) {
+  const P = S.profile, patr = g === 'boy' ? P.patr : femPatr(P.patr), sur = g === 'boy' ? P.surname : femSurname(P.surname);
+  return `${n[0]}. ${patr ? patr[0] + '. ' : ''}${sur}`;
+}
+
+/* ---------- отрисовка ---------- */
+let busy = false, toastT = 0, deckKey = '';
+function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3400); }
+function nameSize(n) { const l = n.length; return l <= 4 ? 64 : l <= 6 ? 52 : l <= 7 ? 42 : l <= 10 ? 34 : l <= 12 ? 28 : 24; }
+function cardHTML(e, cls) {
+  const g = S.g;
+  const forms = e.f.length
+    ? `<div class="forms"><span class="lbl">Дома можно звать</span><ul class="chips">${e.f.map(f => `<li>${esc(f)}</li>`).join('')}</ul></div>`
+    : e.c ? `<div class="forms"><span class="lbl">Это имя добавили вы</span></div>` : '';
+  return `<article class="card ${cls}" data-n="${esc(e.n)}">
+    <span class="wm" aria-hidden="true">${esc(e.n[0])}</span>
+    <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span>
+    <div class="card-main">
+      <span class="lbl">${r2q() ? 'Второй круг' : g === 'boy' ? 'Мальчик' : 'Девочка'}</span>
+      <h2 style="font-size:${nameSize(e.n)}px">${esc(e.n)}</h2>
+      <p class="fio">${esc(fio(g, e.n))}</p>
+      <p class="ini">В документах: ${esc(initials(g, e.n))}</p>
+    </div>${forms}</article>`;
+}
+function renderDeck() {
+  const q = queue(), st = $('#stack'), D = S.d[S.g], r2m = !!r2q();
+  $('#left').textContent = r2m ? `Второй круг: осталось ${q.length}` : q.length ? `Осталось имён: ${q.length}` : '';
+  $('#add-open').hidden = r2m;
+  $('#b-no').disabled = $('#b-yes').disabled = !q.length;
+  $('#b-undo').disabled = !(r2m ? D.r2.hist[U.p] : D.hist[U.p]).length;
+  const key = [S.g, U.p, r2m, q[0], q[1], JSON.stringify(S.profile)].join('|');
+  if (key === deckKey && (busy || st.firstElementChild)) return;   // не перерисовываем карточку, которую сейчас тянут
+  deckKey = key;
+  if (!q.length) {
+    st.innerHTML = `<div class="empty"><h3>${esc(players()[U.p])}, имена закончились</h3>
+      <p>${REMOTE ? 'Добавьте своё имя или включите ещё один набор в настройках.' : `Добавьте своё имя или передайте телефон: пусть свайпает ${esc(players()[1 - U.p])}.`}</p></div>`;
+    return;
+  }
+  st.innerHTML = (q[1] ? cardHTML(Core.entry(S, S.g, q[1]), 'next') : '') + cardHTML(Core.entry(S, S.g, q[0]), 'top');
+  bindCard(st.querySelector('.card.top'));
+}
+function renderMatches() {
+  const D = S.d[S.g], ms = matches(S.g), who = S.g === 'boy' ? 'мальчика' : 'девочки', pl = players();
+  const finals = (D.finals || []).filter(n => ms.some(e => e.n === n));
+  const item = e => `<div class="m">
+      <div class="m-top"><b>${esc(e.n)}</b><button class="rm" type="button" data-rm="${esc(e.n)}">Убрать</button></div>
+      <p class="full">${esc(fio(S.g, e.n))}</p>
+      ${e.f.length ? `<p>${esc(e.f.join(', '))}</p>` : ''}</div>`;
+  $('#m-sub').textContent = ms.length ? `Имена для ${who}, которые нравятся вам обоим: ${ms.length}` : '';
+  if (!ms.length) {
+    $('#m-list').innerHTML = `<div class="empty"><h3>Пока нет мэтчей для ${who}</h3><p>Мэтч появится, когда вы оба поставите лайк одному имени.</p></div>`;
+    return;
+  }
+  let ctl = '';
+  if (D.r2) {
+    const st = p => { const l = D.r2.names.filter(n => !(n in D.r2.votes[p])).length; return `${esc(pl[p])}: ${l ? 'осталось ' + l : 'готово'}`; };
+    ctl = `<p class="note">Идёт второй круг. ${st(0)}. ${st(1)}.</p>
+      <button class="btn ghost" type="button" data-act="r2cancel">Отменить второй круг</button>`;
+  } else {
+    const pool = finals.length >= 2 ? finals.length : ms.length;
+    if (pool >= 2) ctl = `<button class="btn" type="button" data-act="r2start">${finals.length >= 2 ? 'Ещё один круг среди финалистов' : 'Начать второй круг'}</button>
+      <p class="sub">Каждый заново свайпает ${pool} ${finals.length >= 2 ? 'финалистов' : 'мэтчей'}. Останутся имена, которые снова понравятся обоим.</p>`;
+    if (finals.length) ctl += `<button class="btn ghost" type="button" data-act="r2clear">Сбросить финалистов</button>`;
+  }
+  const rest = ms.filter(e => !finals.includes(e.n));
+  $('#m-list').innerHTML = ctl
+    + (finals.length ? `<span class="lbl">Финалисты второго круга</span>` + ms.filter(e => finals.includes(e.n)).map(item).join('') : '')
+    + (finals.length && rest.length ? `<span class="lbl">Остальные мэтчи</span>` : '')
+    + rest.map(item).join('');
+}
+let patrManual = false;
+function renderForm() {
+  const P = S.profile;
+  $('#f-sur').value = P.surname; $('#f-dad').value = P.dad; $('#f-patr').value = P.patr; $('#f-mom').value = P.mom;
+  patrManual = !P.example && P.patr !== patronymic(P.dad);
+  $('#ex-note').hidden = !P.example;
+  $('#f-save').textContent = P.example ? 'Начать выбирать' : 'Сохранить';
+  $('#f-err').textContent = '';
+  preview();
+}
+function renderSets() {
+  $('#sets').innerHTML = Object.keys(SETS).map(k => `<button type="button" data-set="${k}" aria-pressed="${!!S.sets[k]}">
+    <i aria-hidden="true">${S.sets[k] ? '✓' : ''}</i><span>${SETS[k]}</span><em>${BASE[S.g].filter(e => e.s === k).length}</em></button>`).join('');
+}
+function preview() {
+  const sur = cap($('#f-sur').value), patr = cap($('#f-patr').value);
+  $('#pv-boy').textContent = `${sur} Лев ${patr}`.trim();
+  $('#pv-girl').textContent = `${femSurname(sur)} Алиса ${femPatr(patr)}`.trim();
+}
+function renderJoin() {
+  const f = $('#j-code');
+  if (!f.dataset.init) { f.dataset.init = 1; try { f.value = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''; } catch (e) {} }
+}
+function render() {
+  const show = FATAL ? 'fatal' : JOIN ? 'join' : !S ? 'fatal' : U.view;
+  ['form', 'deck', 'matches', 'join', 'fatal'].forEach(v => $('#v-' + v).hidden = v !== show);
+  $('#tabs').hidden = show === 'fatal' || show === 'join';
+  $('#who').hidden = REMOTE || show !== 'deck';
+  if (show === 'fatal') { $('#fatal-text').textContent = FATAL || 'Загружаем…'; return; }
+  if (show === 'join') { renderJoin(); return; }
+  document.body.dataset.g = S.g;
+  document.querySelectorAll('#seg-g button').forEach(b => b.setAttribute('aria-pressed', b.dataset.g === S.g));
+  const pl = players();
+  document.querySelectorAll('#seg-p button').forEach(b => { b.textContent = pl[+b.dataset.p]; b.setAttribute('aria-pressed', +b.dataset.p === U.p); });
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === U.view));
+  const mc = matches(S.g).length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
+  const inv = $('#invite-note'); inv.hidden = !INVITE;
+  if (INVITE) inv.textContent = `Код приглашения для второго участника: ${INVITE}. Отправьте его: второй участник введёт код при первом входе.`;
+  $('#f-reset').dataset.label = REMOTE ? 'Сбросить все свайпы и свои имена у обоих' : 'Сбросить все свайпы и свои имена';
+  if (!resetArmed) $('#f-reset').textContent = $('#f-reset').dataset.label;
+  if (show === 'deck') renderDeck();
+  if (show === 'matches') renderMatches();
+  if (show === 'form') renderSets();
+  checkMatches();
+}
+function go(view) { U.view = view; saveU(); if (view === 'form') renderForm(); render(); }
+
+/* ---------- мэтч: показываем каждому, кто его ещё не видел ---------- */
+function checkMatches() {
+  if (!$('#match').hidden) return;
+  const seen = SEEN[S.g] || (SEEN[S.g] = []), e = matches(S.g).find(x => !seen.includes(x.n));
+  if (!e) return;
+  seen.push(e.n); LS.set('nashe-imya-seen', SEEN);
+  const pl = players();
+  $('#match-who').textContent = `${pl[0]} и ${pl[1]} выбрали`;
+  $('#match-name').textContent = e.n; $('#match-fio').textContent = fio(S.g, e.n);
+  $('#match').hidden = false; $('#match-next').focus();
+  try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (x) {}
+}
+
+/* ---------- свайпы ---------- */
+function setStamp(el, dx) {
+  el.querySelector('.stamp.yes').style.opacity = Math.max(0, Math.min(1, dx / 90));
+  el.querySelector('.stamp.no').style.opacity = Math.max(0, Math.min(1, -dx / 90));
+}
+function bindCard(el) {
+  let sx = 0, sy = 0, dx = 0, drag = false;
+  el.onpointerdown = e => { if (busy) return; drag = true; sx = e.clientX; sy = e.clientY; dx = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} el.style.transition = 'none'; };
+  el.onpointermove = e => { if (!drag) return; dx = e.clientX - sx; el.style.transform = `translate(${dx}px,${(e.clientY - sy) * .25}px) rotate(${dx / 20}deg)`; setStamp(el, dx); };
+  const end = () => { if (!drag) return; drag = false; el.style.transition = ''; if (Math.abs(dx) > 90) fly(dx > 0); else { el.style.transform = ''; setStamp(el, 0); } };
+  el.onpointerup = end; el.onpointercancel = end;
+}
+function fly(like) {
+  if (busy || !S) return; const q = queue(); if (!q.length) return;
+  const el = $('.card.top'); if (!el || el.dataset.n !== q[0]) return;
+  busy = true;
+  el.style.transition = 'transform .26s ease-in, opacity .26s';
+  el.style.transform = `translate(${like ? 520 : -520}px,40px) rotate(${like ? 24 : -24}deg)`; el.style.opacity = 0;
+  setStamp(el, like ? 200 : -200);
+  setTimeout(() => { busy = false; commit(q[0], like); }, 240);
+}
+function commit(n, like) {
+  const r = actNow({ t: 'vote', g: S.g, n, like, r2: !!r2q() }), ev = r.ev || {};
+  if (ev.r2done !== undefined) {
+    U.view = 'matches'; saveU();
+    toast(ev.r2done ? `Второй круг завершён. Финалистов: ${ev.r2done}` : 'Второй круг завершён. Общих имён не осталось, мэтчи на месте.');
+  } else if (ev.r2mine) toast(`Вы прошли второй круг. Теперь очередь: ${players()[1 - U.p]}.`);
+  render();
+}
+
+/* ---------- события ---------- */
+$('#seg-g').onclick = async e => { const b = e.target.closest('button'); if (!b) return; await actWait({ t: 'setg', g: b.dataset.g }); };
+$('#sets').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return; const k = b.dataset.set;
+  const r = await actWait({ t: 'sets', k, on: !S.sets[k] }); if (r.err) toast(r.err);
+};
+$('#seg-p').onclick = e => { const b = e.target.closest('button'); if (!b) return; U.p = +b.dataset.p; saveU(); render(); };
+$('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); };
+$('#b-yes').onclick = () => fly(true);
+$('#b-no').onclick = () => fly(false);
+$('#b-undo').onclick = () => { if (busy) return; actNow({ t: 'undo', g: S.g, r2: !!r2q() }); render(); };
+document.addEventListener('keydown', e => {
+  if (!S || JOIN || U.view !== 'deck' || !$('#add').hidden || !$('#match').hidden || /INPUT/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') fly(true); if (e.key === 'ArrowLeft') fly(false);
+});
+$('#m-list').onclick = async e => {
+  const a = e.target.closest('[data-act]');
+  if (a) {
+    const act = a.dataset.act, r = await actWait({ t: act, g: S.g });
+    if (r.err) { toast(r.err); return; }
+    if (act === 'r2start') { toast(`Второй круг начался: ${r.ev.r2start} имён. ${REMOTE ? 'Свайпайте каждый у себя.' : 'Свайпайте по очереди.'}`); go('deck'); }
+    if (act === 'r2cancel') toast('Второй круг отменён');
+    return;
+  }
+  const b = e.target.closest('[data-rm]'); if (!b) return;
+  const r = await actWait({ t: 'unmatch', g: S.g, n: b.dataset.rm }); if (!r.err) toast(`«${b.dataset.rm}» убрано из мэтчей`);
+};
+$('#match-next').onclick = () => { $('#match').hidden = true; checkMatches(); };
+$('#match-open').onclick = () => { $('#match').hidden = true; go('matches'); };
+
+/* настройки */
+$('#f-dad').oninput = () => { if (!patrManual) $('#f-patr').value = patronymic($('#f-dad').value); preview(); };
+$('#f-patr').oninput = () => { patrManual = true; preview(); };
+$('#f-sur').oninput = preview;
+$('#form').onsubmit = async e => {
+  e.preventDefault();
+  const r = await actWait({ t: 'profile', surname: $('#f-sur').value, dad: $('#f-dad').value, patr: $('#f-patr').value, mom: $('#f-mom').value });
+  if (r.err) { $('#f-err').textContent = r.err; return; }
+  go('deck');
+};
+let resetArmed = 0;
+$('#f-reset').onclick = async () => {
+  const b = $('#f-reset');
+  if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = b.dataset.label; }, 4000); b.textContent = 'Нажмите ещё раз, чтобы сбросить'; return; }
+  clearTimeout(resetArmed); resetArmed = 0; b.textContent = b.dataset.label;
+  const r = await actWait({ t: 'reset' });
+  if (!r.err) { SEEN = { boy: [], girl: [] }; LS.set('nashe-imya-seen', SEEN); toast('Свайпы и свои имена сброшены'); }
+};
+
+/* своё имя */
+$('#add-open').onclick = () => {
+  $('#add-label').textContent = S.g === 'boy' ? 'Имя для мальчика' : 'Имя для девочки';
+  $('#add-name').value = ''; $('#add-err').textContent = ''; $('#add').hidden = false; $('#add-name').focus();
+};
+$('#add-close').onclick = () => $('#add').hidden = true;
+$('#add').onclick = e => { if (e.target.id === 'add') $('#add').hidden = true; };
+$('#add-form').onsubmit = async e => {
+  e.preventDefault();
+  const r = await actWait({ t: 'add', g: S.g, name: $('#add-name').value });
+  if (r.err) { $('#add-err').textContent = r.err; return; }
+  $('#add').hidden = true;
+  toast(`«${r.ev.added}» добавлено. Ваш лайк стоит, имя скоро выпадет у ${players()[1 - U.p]}.`);
+};
+
+/* вход (только общий режим) */
+$('#v-join').onclick = async e => {
+  const b = e.target.closest('[data-role]'); if (!b || b.disabled) return;
+  $('#j-err').textContent = '';
+  try {
+    const r = await api('POST', 'api/join', { role: +b.dataset.role, code: $('#j-code').value });
+    if (r.err) { $('#j-err').textContent = r.err; return; }
+    U.view = r.state.profile.example ? 'form' : 'deck'; saveU(); take(r); if (U.view === 'form') renderForm();
+  } catch (x) { if (!FATAL) $('#j-err').textContent = 'Нет связи. Попробуйте ещё раз.'; }
+};
+
+/* ---------- запуск ---------- */
+function startLocal() {
+  const old = LS.get('nashe-imya-v1');
+  S = old && old.d && old.profile ? old : Core.fresh();
+  if (S.view) { U.view = S.view; U.p = S.p || 0; delete S.view; delete S.p; saveU(); }
+  Core.migrate(S); saveLocal();
+  if (U.view === 'form') renderForm();
+  render();
+}
+async function startRemote() {
+  REMOTE = true; render();
+  try {
+    if (tg && initData) { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); }
+    const r = await api('GET', 'api/state');
+    if (r.joined !== false && !LS.get('nashe-imya-ui')) U.view = r.state.profile.example ? 'form' : 'deck';
+    take(r); if (S && U.view === 'form') renderForm();
+  } catch (e) { if (!FATAL) { FATAL = 'Нет связи с сервером. Проверьте интернет и откройте приложение заново.'; render(); } }
+  const poll = () => {
+    if (FATAL || document.hidden || pending) return;
+    api('GET', 'api/state?v=' + (JOIN ? 0 : V)).then(r => { if (!r.same && !pending) take(r, true); }).catch(() => {});
+  };
+  setInterval(poll, 4000);
+  document.addEventListener('visibilitychange', poll);
+}
+if (initData || dev) startRemote();
+else {
+  startLocal();
+  if (/^http/.test(location.protocol)) fetch('api/ping').then(r => r.ok ? r.json() : null).then(j => {
+    if (j && j.app === 'nashe-imya') { S = null; FATAL = 'Откройте приложение через Telegram: кнопка в чате с ботом.'; render(); }
+  }).catch(() => {});
+}
+</script>

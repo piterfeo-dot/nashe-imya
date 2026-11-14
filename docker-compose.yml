@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      MAX_ROOMS: ${MAX_ROOMS:-10}
+    volumes:
+      - ./data:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      SITE_HOST: ${SITE_HOST}
+      HTTPS_PORT: ${HTTPS_PORT:-443}
+    ports:
+      - "80:80"
+      - "${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+
+volumes:
+  caddy_data:
