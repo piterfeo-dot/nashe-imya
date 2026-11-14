@@ -12,6 +12,16 @@ if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sh
 fi
 
+if ! docker compose version >/dev/null 2>&1; then
+  say "Ставлю дополнение Docker Compose"
+  apt-get install -y docker-compose-plugin >/dev/null 2>&1 || apt-get install -y docker-compose-v2 >/dev/null 2>&1 || {
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  }
+  docker compose version
+fi
+
 if [ ! -f .env ]; then
   say "Проверяю порты"
   if busy 80; then
