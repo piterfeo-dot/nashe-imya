@@ -35,7 +35,15 @@ function femSurname(s) {
 /* ---------- общее состояние пары и действия над ним ---------- */
 const SETS = { r: 'Привычные русские', o: 'Редкие и старинные', i: 'Международные', e: 'Восточные и кавказские' };
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-function mk(g) { const names = BASE[g].map(e => e.n); return { custom: [], votes: [{}, {}], order: [shuffle(names), shuffle(names)], hist: [[], []], r2: null, finals: null }; }
+/* Случайный порядок, в котором наборы идут вперемешку равномерно, без длинных серий из одного набора */
+function mix(g, custom) {
+  const groups = {}, keyed = [];
+  BASE[g].forEach(e => (groups[e.s] = groups[e.s] || []).push(e.n));
+  if (custom && custom.length) groups.c = custom.map(e => e.n);
+  for (const s in groups) shuffle(groups[s]).forEach((n, i, a) => keyed.push([(i + Math.random()) / a.length, n]));
+  return keyed.sort((x, y) => x[0] - y[0]).map(x => x[1]);
+}
+function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null }; }
 function fresh() {
   return { profile: { surname: 'Иванов', dad: 'Андрей', patr: 'Андреевич', mom: 'Окси', example: true },
     g: 'boy', sets: { r: 1, o: 1, i: 1, e: 1 }, d: { boy: mk('boy'), girl: mk('girl') } };
@@ -127,6 +135,7 @@ function apply(S, p, a) {
       S.sets[a.k] = a.on ? 1 : 0; return ok;
     }
     case 'reset': S.d = { boy: mk('boy'), girl: mk('girl') }; return ok;
+    case 'resetme': for (const x in BASE) { const E = S.d[x]; E.votes[p] = {}; E.hist[p] = []; E.order[p] = mix(x, E.custom); } return ok;
   }
   return { err: 'Неизвестное действие.' };
 }

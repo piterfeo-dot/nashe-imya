@@ -12,7 +12,7 @@ const LS = {
 const tg = window.Telegram && window.Telegram.WebApp;
 const initData = (tg && tg.initData) || '';
 let dev = ''; try { dev = new URLSearchParams(location.search).get('dev') || ''; } catch (e) {}
-let S = null, REMOTE = false, V = 0, INVITE = null, JOIN = null, FATAL = '', pending = 0, chain = Promise.resolve();
+let S = null, REMOTE = false, V = 0, INVITE = null, BOT = '', JOIN = null, FATAL = '', pending = 0, chain = Promise.resolve();
 let U = LS.get('nashe-imya-ui') || { view: 'form', p: 0 };
 let SEEN = LS.get('nashe-imya-seen') || { boy: [], girl: [] };
 const saveU = () => LS.set('nashe-imya-ui', U);
@@ -29,7 +29,7 @@ function take(resp, fromPoll) {
   if (resp.joined === false) { JOIN = resp; S = null; render(); return; }
   if (!resp.state) return;
   const had = !!(S && S.d[S.g].r2);
-  JOIN = null; S = resp.state; V = resp.v; INVITE = resp.invite || null; U.p = resp.p;
+  JOIN = null; S = resp.state; V = resp.v; INVITE = resp.invite || null; BOT = resp.bot || ''; U.p = resp.p;
   if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает второй круг: ${S.d[S.g].r2.names.length} имён.`);
   render();
 }
@@ -74,7 +74,7 @@ function cardHTML(e, cls) {
     <span class="wm" aria-hidden="true">${esc(e.n[0])}</span>
     <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span>
     <div class="card-main">
-      <span class="lbl">${r2q() ? 'Второй круг' : g === 'boy' ? 'Мальчик' : 'Девочка'}</span>
+      <span class="lbl">${r2q() ? 'Второй круг' : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
       <h2 style="font-size:${nameSize(e.n)}px">${esc(e.n)}</h2>
       <p class="fio">${esc(fio(g, e.n))}</p>
       <p class="ini">В документах: ${esc(initials(g, e.n))}</p>
@@ -162,10 +162,10 @@ function render() {
   document.querySelectorAll('#seg-p button').forEach(b => { b.textContent = pl[+b.dataset.p]; b.setAttribute('aria-pressed', +b.dataset.p === U.p); });
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === U.view));
   const mc = matches(S.g).length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
-  const inv = $('#invite-note'); inv.hidden = !INVITE;
-  if (INVITE) inv.textContent = `Код приглашения для второго участника: ${INVITE}. Отправьте его: второй участник введёт код при первом входе.`;
-  $('#f-reset').dataset.label = REMOTE ? 'Сбросить все свайпы и свои имена у обоих' : 'Сбросить все свайпы и свои имена';
-  if (!resetArmed) $('#f-reset').textContent = $('#f-reset').dataset.label;
+  $('#invite').hidden = !INVITE;
+  if (INVITE) { $('#invite-code').textContent = INVITE; $('#inv-share').hidden = !(tg && BOT); }
+  const rb = $('#f-reset'); rb.dataset.label = REMOTE ? 'Сбросить всё у обоих: свайпы и свои имена' : 'Сбросить все свайпы и свои имена';
+  if (!rb.armed()) rb.textContent = rb.dataset.label;
   if (show === 'deck') renderDeck();
   if (show === 'matches') renderMatches();
   if (show === 'form') renderSets();
@@ -256,13 +256,33 @@ $('#form').onsubmit = async e => {
   if (r.err) { $('#f-err').textContent = r.err; return; }
   go('deck');
 };
-let resetArmed = 0;
-$('#f-reset').onclick = async () => {
-  const b = $('#f-reset');
-  if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = b.dataset.label; }, 4000); b.textContent = 'Нажмите ещё раз, чтобы сбросить'; return; }
-  clearTimeout(resetArmed); resetArmed = 0; b.textContent = b.dataset.label;
-  const r = await actWait({ t: 'reset' });
-  if (!r.err) { SEEN = { boy: [], girl: [] }; LS.set('nashe-imya-seen', SEEN); toast('Свайпы и свои имена сброшены'); }
+function twoTap(b, fn) {          // опасные кнопки срабатывают со второго нажатия
+  let t = 0;
+  b.armed = () => !!t;
+  b.onclick = async () => {
+    if (!t) { t = setTimeout(() => { t = 0; b.textContent = b.dataset.label; }, 4000); b.textContent = 'Нажмите ещё раз, чтобы сбросить'; return; }
+    clearTimeout(t); t = 0; b.textContent = b.dataset.label; await fn();
+  };
+}
+const forgetSeen = () => { SEEN = { boy: [], girl: [] }; LS.set('nashe-imya-seen', SEEN); };
+twoTap($('#f-resetme'), async () => { const r = await actWait({ t: 'resetme' }); if (!r.err) { forgetSeen(); deckKey = ''; render(); toast('Ваши свайпы сброшены, имена перемешаны заново'); } });
+twoTap($('#f-reset'), async () => { const r = await actWait({ t: 'reset' }); if (!r.err) { forgetSeen(); deckKey = ''; render(); toast('Свайпы и свои имена сброшены'); } });
+
+/* приглашение второго участника */
+const botLink = () => BOT ? 'https://t.me/' + BOT : '';
+const inviteText = () => `Выбираем имя малышу вместе. ${BOT ? 'Открой бота ' + botLink() + ', нажми' : 'Нажми в боте'} «Открыть» и введи код приглашения: ${INVITE}`;
+$('#inv-copy').onclick = () => {
+  const text = inviteText(), done = () => toast('Приглашение скопировано'), fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); ok ? done() : toast('Не получилось скопировать. Код: ' + INVITE);
+  };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+};
+$('#inv-share').onclick = () => {
+  const url = 'https://t.me/share/url?url=' + encodeURIComponent(botLink()) + '&text=' + encodeURIComponent(`Выбираем имя малышу вместе. Нажми в боте «Открыть» и введи код приглашения: ${INVITE}`);
+  try { tg.openTelegramLink(url); } catch (e) { toast('Не получилось открыть Telegram. Скопируйте приглашение.'); }
 };
 
 /* своё имя */

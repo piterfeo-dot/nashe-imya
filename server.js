@@ -48,8 +48,15 @@ function whoIs(req) {
     return u && u.id ? { id: 'tg' + u.id } : null;
   } catch (e) { return null; }
 }
+let BOT = '';                      // адрес бота (без @) — для ссылки в приглашении
+async function askBot() {
+  if (BOT || !TOKEN) return;
+  try { const j = await (await fetch('https://api.telegram.org/bot' + TOKEN + '/getMe')).json(); if (j.ok) BOT = j.result.username; } catch (e) {}
+  if (!BOT) setTimeout(askBot, 60000).unref();
+}
+askBot();
 function snap(r, p) {
-  return { joined: true, p, v: r.v, state: r.state, invite: r.members.includes(null) ? r.id : null };
+  return { joined: true, p, v: r.v, state: r.state, invite: r.members.includes(null) ? r.id : null, bot: BOT };
 }
 function body(req) {
   return new Promise((res, rej) => {
