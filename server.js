@@ -11,10 +11,14 @@ if (!TOKEN && !DEV) { console.error('Не задан BOT_TOKEN'); process.exit(1
 
 const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const Core = vm.runInNewContext(src.match(/\/\*SHARED-BEGIN\*\/([\s\S]*?)\/\*SHARED-END\*\//)[1] + '\n;Core');
+/* Шрифты и библиотека Telegram отдаются с этого же сервера: страница не ждёт внешние адреса */
+const FONTS = path.join(__dirname, 'fonts'), HAS_FONTS = fs.existsSync(path.join(FONTS, 'fonts.css'));
+let TGJS = null; try { const t = fs.readFileSync(path.join(__dirname, 'tg.js')); if (t.length > 1000) TGJS = t; } catch (e) {}
 const PAGE = '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
   + '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">'
   + '<style>:root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>'
-  + '<script src="https://telegram.org/js/telegram-web-app.js"></script></head><body>' + src + '</body></html>';
+  + (TGJS ? '<script src="tg.js"></script>' : '') + '</head><body>'
+  + (HAS_FONTS ? src.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/, '<link rel="stylesheet" href="fonts/fonts.css">') : src) + '</body></html>';
 
 /* Хранилище: у каждой пары своя комната = один файл data/rooms/КОД.json. Код комнаты — он же код приглашения. */
 const ROOMS = path.join(DATA, 'rooms'), USERS = path.join(DATA, 'users.json');
@@ -74,6 +78,12 @@ http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x'), route = req.method + ' ' + url.pathname;
     if (route === 'GET /') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(PAGE); }
     if (route === 'GET /api/ping') return json(res, 200, { app: 'nashe-imya' });
+    if (route === 'GET /tg.js' && TGJS) { res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' }); return res.end(TGJS); }
+    const fm = req.method === 'GET' && HAS_FONTS && url.pathname.match(/^\/fonts\/([a-z-]+\.(woff2|css))$/);
+    if (fm && fs.existsSync(path.join(FONTS, fm[1]))) {
+      res.writeHead(200, { 'Content-Type': fm[2] === 'css' ? 'text/css; charset=utf-8' : 'font/woff2', 'Cache-Control': 'public, max-age=2592000' });
+      return res.end(fs.readFileSync(path.join(FONTS, fm[1])));
+    }
     if (!url.pathname.startsWith('/api/')) { res.writeHead(404); return res.end('Not found'); }
 
     const u = whoIs(req);

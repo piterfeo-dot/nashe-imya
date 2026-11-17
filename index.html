@@ -1022,7 +1022,16 @@ const LS = {
    REMOTE = страница открыта с нашего сервера (Telegram): состояние общее, лежит на сервере.
    Иначе — прототип: всё хранится в этом браузере, оба игрока на одном экране. */
 const tg = window.Telegram && window.Telegram.WebApp;
-const initData = (tg && tg.initData) || '';
+/* Если библиотека Telegram не загрузилась, берём данные входа прямо из адреса страницы и говорим с Telegram напрямую */
+function hashInit() { try { return new URLSearchParams(location.hash.slice(1)).get('tgWebAppData') || ''; } catch (e) { return ''; } }
+const initData = (tg && tg.initData) || hashInit();
+function tgEvent(name, data) {
+  try {
+    const p = window.TelegramWebviewProxy, d = JSON.stringify(data || {});
+    if (p && p.postEvent) p.postEvent(name, d);
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: name, eventData: data || {} }), 'https://web.telegram.org');
+  } catch (e) {}
+}
 let dev = ''; try { dev = new URLSearchParams(location.search).get('dev') || ''; } catch (e) {}
 let S = null, REMOTE = false, V = 0, INVITE = null, BOT = '', JOIN = null, FATAL = '', pending = 0, chain = Promise.resolve();
 let U = LS.get('nashe-imya-ui') || { view: 'form', p: 0 };
@@ -1175,7 +1184,7 @@ function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === U.view));
   const mc = matches(S.g).length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
   $('#invite').hidden = !INVITE;
-  if (INVITE) { $('#invite-code').textContent = INVITE; $('#inv-share').hidden = !(tg && BOT); }
+  if (INVITE) { $('#invite-code').textContent = INVITE; $('#inv-share').hidden = !(initData && BOT); }
   const rb = $('#f-reset'); rb.dataset.label = REMOTE ? 'Сбросить всё у обоих: свайпы и свои имена' : 'Сбросить все свайпы и свои имена';
   if (!rb.armed()) rb.textContent = rb.dataset.label;
   if (show === 'deck') renderDeck();
@@ -1294,7 +1303,7 @@ $('#inv-copy').onclick = () => {
 };
 $('#inv-share').onclick = () => {
   const url = 'https://t.me/share/url?url=' + encodeURIComponent(botLink()) + '&text=' + encodeURIComponent(`Выбираем имя малышу вместе. Нажми в боте «Открыть» и введи код приглашения: ${INVITE}`);
-  try { tg.openTelegramLink(url); } catch (e) { toast('Не получилось открыть Telegram. Скопируйте приглашение.'); }
+  try { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else tgEvent('web_app_open_tg_link', { path_full: url.replace('https://t.me', '') }); } catch (e) { toast('Не получилось открыть Telegram. Скопируйте приглашение.'); }
 };
 
 /* своё имя */
@@ -1335,7 +1344,8 @@ function startLocal() {
 async function startRemote() {
   REMOTE = true; render();
   try {
-    if (tg && initData) { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); }
+    if (tg && tg.initData) { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); }
+    else if (initData) { tgEvent('web_app_ready'); tgEvent('web_app_expand'); tgEvent('web_app_setup_swipe_behavior', { allow_vertical_swipe: false }); }
     const r = await api('GET', 'api/state');
     if (r.joined !== false && !LS.get('nashe-imya-ui')) U.view = r.state.profile.example ? 'form' : 'deck';
     take(r); if (S && U.view === 'form') renderForm();
