@@ -26,7 +26,7 @@ const read = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } 
   const ids = Object.keys(rooms);
   if (!ids.length) { console.log('Данных нет: ни одной комнаты.'); return; }
 
-  let txt = 'Наше имя — выгрузка от ' + new Date().toISOString().slice(0, 10) + '\n';
+  let txt = 'Наш пиздюк — выгрузка от ' + new Date().toISOString().slice(0, 10) + '\n';
   for (const id of ids) {
     const S = rooms[id].state, P = S.profile;
     txt += `\n=== Комната ${id}: ${P.surname}, папа ${P.dad}, мама ${P.mom} ===\n`;

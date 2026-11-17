@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Установка и обновление «Наше имя» на сервере. Запуск: bash install.sh
+# Установка и обновление «Наш пиздюк» на сервере. Запуск: bash install.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 if [ "$(id -u)" != 0 ]; then exec sudo bash "$0" "$@"; fi

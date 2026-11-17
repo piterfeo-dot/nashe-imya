@@ -1,5 +1,5 @@
 'use strict';
-/* «Наше имя» — сервер. Без внешних библиотек: нужен только Node.js 18+.
+/* «Наш пиздюк» — сервер. Без внешних библиотек: нужен только Node.js 18+.
    Отдаёт страницу, проверяет вход через Telegram и хранит общее состояние пары в одном файле. */
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), vm = require('vm');
 
@@ -123,4 +123,4 @@ http.createServer(async (req, res) => {
     }
     json(res, 404, { err: 'Нет такого адреса.' });
   } catch (e) { json(res, 400, { err: 'Ошибка запроса.' }); }
-}).listen(PORT, () => console.log('Наше имя: порт ' + PORT + (DEV ? ' (режим проверки)' : '')));
+}).listen(PORT, () => console.log('Наш пиздюк: порт ' + PORT + (DEV ? ' (режим проверки)' : '')));
