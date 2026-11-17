@@ -145,6 +145,15 @@ function apply(S, p, a) {
       o.splice(i + Math.floor(Math.random() * 4), 0, n);
       ev.added = n; return ok;
     }
+    case 'sup': {                         // поставить или снять суперлайк на имени из своих лайков
+      const n = String(a.n);
+      if (D.r2) return { err: 'Пока идёт круг, суперлайк ставится только на его карточках.' };
+      if (!a.on) { delete D.sup[p][n]; return ok; }
+      if (D.votes[p][n] !== 1) return { err: 'Сначала поставьте имени лайк.' };
+      if (D.sup[p][n]) return ok;
+      if (supLeft(S, g, p) <= 0) return { err: 'Суперлайки на этот круг закончились. Снимите один, чтобы переставить.' };
+      D.sup[p][n] = 1; return ok;
+    }
     case 'unmatch': {
       const n = String(a.n);
       if (entry(S, g, n)) { D.votes[p][n] = 0; delete D.sup[p][n]; if (D.finals) D.finals = D.finals.filter(x => x !== n); }
