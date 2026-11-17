@@ -21,24 +21,30 @@ function tgEvent(name, data) {
   } catch (e) {}
 }
 let dev = ''; try { dev = new URLSearchParams(location.search).get('dev') || ''; } catch (e) {}
-let S = null, REMOTE = false, V = 0, INVITE = null, BOT = '', JOIN = null, FATAL = '', pending = 0, chain = Promise.resolve();
+let S = null, G = null, CTX = [], GCODE = null, REMOTE = false, V = 0, INVITE = null, BOT = '', JOIN = null, FATAL = '', pending = 0, chain = Promise.resolve();
 let U = LS.get('nashe-imya-ui') || { view: 'form', p: 0 };
 let SEEN = LS.get('nashe-imya-seen') || { boy: [], girl: [] };
+let ROOM = LS.get('nashe-imya-room') || '';       // какая комната открыта на этом устройстве
 const saveU = () => LS.set('nashe-imya-ui', U);
+/* Код из ссылки-приглашения (t.me/бот?startapp=КОД) и имя из Telegram — чтобы гостю не печатать */
+function startParam() { try { return (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || new URLSearchParams(initData).get('start_param') || ''; } catch (e) { return ''; } }
+function tgName() { try { return JSON.parse(new URLSearchParams(initData).get('user')).first_name || ''; } catch (e) { return ''; } }
 const saveLocal = () => { if (!REMOTE) LS.set('nashe-imya-v1', S); };
 
 async function api(method, url, body) {
   const r = await fetch(url, { method, cache: 'no-store',
-    headers: { 'Content-Type': 'application/json', 'X-Tg-Init': initData, 'X-Dev-User': dev },
+    headers: { 'Content-Type': 'application/json', 'X-Tg-Init': initData, 'X-Dev-User': dev, 'X-Room': ROOM },
     body: body ? JSON.stringify(body) : undefined });
   if (r.status === 401) { FATAL = 'Не получилось войти. Закройте приложение и откройте его заново из Telegram.'; render(); throw new Error('auth'); }
   return r.json();
 }
 function take(resp, fromPoll) {
-  if (resp.joined === false) { JOIN = resp; S = null; render(); return; }
-  if (!resp.state) return;
+  if (resp.joined === false) { JOIN = { back: false }; S = null; G = null; CTX = []; render(); return; }
+  if (!resp.state && !resp.gview) return;
+  CTX = resp.ctx || []; ROOM = resp.room || ''; LS.set('nashe-imya-room', ROOM); BOT = resp.bot || ''; V = resp.v; JOIN = null;
+  if (resp.guest) { G = resp.gview; S = null; render(); return; }
   const had = !!(S && S.d[S.g].r2);
-  JOIN = null; S = resp.state; V = resp.v; INVITE = resp.invite || null; BOT = resp.bot || ''; U.p = resp.p;
+  G = null; S = resp.state; INVITE = resp.invite || null; GCODE = resp.gcode || null; U.p = resp.p;
   if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает ${S.d[S.g].rn}-й круг: ${S.d[S.g].r2.names.length} имён.`);
   render();
 }
@@ -57,17 +63,19 @@ async function actWait(a) {
 }
 
 /* ---------- данные для экрана ---------- */
-const players = () => [S.profile.dad || 'Папа', S.profile.mom || 'Мама'];
-const queue = () => Core.queue(S, U.p);
-const r2q = () => Core.r2q(S, U.p);
+const prof = () => G ? G.profile : S.profile;      // G — гостевой режим, S — режим родителей
+const curG = () => G ? G.g : S.g;
+const players = () => [prof().dad || 'Папа', prof().mom || 'Мама'];
+const queue = () => G ? G.list.map(e => e.n) : Core.queue(S, U.p);
+const r2q = () => G ? null : Core.r2q(S, U.p);
 const topList = () => Core.top(S, S.g);
-const supOk = () => Core.supLeft(S, S.g, U.p) > 0 && !(S.d[S.g].r2 && !r2q());   // пока идёт круг, суперлайк только на его карточках
+const supOk = () => !G && Core.supLeft(S, S.g, U.p) > 0 && !(S.d[S.g].r2 && !r2q());   // пока идёт круг, суперлайк только на его карточках
 function fio(g, n) {
-  const P = S.profile;
+  const P = prof();
   return g === 'boy' ? `${P.surname} ${n} ${P.patr}` : `${femSurname(P.surname)} ${n} ${femPatr(P.patr)}`;
 }
 function initials(g, n) {
-  const P = S.profile, patr = g === 'boy' ? P.patr : femPatr(P.patr), sur = g === 'boy' ? P.surname : femSurname(P.surname);
+  const P = prof(), patr = g === 'boy' ? P.patr : femPatr(P.patr), sur = g === 'boy' ? P.surname : femSurname(P.surname);
   return `${n[0]}. ${patr ? patr[0] + '. ' : ''}${sur}`;
 }
 
@@ -76,7 +84,7 @@ let busy = false, toastT = 0, deckKey = '';
 function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3400); }
 function nameSize(n) { const l = n.length; return l <= 4 ? 64 : l <= 6 ? 52 : l <= 7 ? 42 : l <= 10 ? 34 : l <= 12 ? 28 : 24; }
 function cardHTML(e, cls) {
-  const g = S.g;
+  const g = curG();
   const forms = e.f.length
     ? `<div class="forms"><span class="lbl">Дома можно звать</span><ul class="chips">${e.f.map(f => `<li>${esc(f)}</li>`).join('')}</ul></div>`
     : e.c ? `<div class="forms"><span class="lbl">Это имя добавили вы</span></div>` : '';
@@ -84,7 +92,7 @@ function cardHTML(e, cls) {
     <span class="wm" aria-hidden="true">${esc(e.n[0])}</span>
     <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span><span class="stamp sup">★ Суперлайк</span>
     <div class="card-main">
-      <span class="lbl">${r2q() ? S.d[g].rn + '-й круг' : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
+      <span class="lbl">${r2q() ? S.d[g].rn + '-й круг' : G ? (g === 'boy' ? 'Имя для мальчика' : 'Имя для девочки') : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
       <h2 style="font-size:${nameSize(e.n)}px">${esc(e.n)}</h2>
       <p class="fio">${esc(fio(g, e.n))}</p>
       <p class="ini">В документах: ${esc(initials(g, e.n))}</p>
@@ -113,11 +121,14 @@ function renderMatches() {
   const info = n => T.find(x => x.e.n === n) || (Core.entry(S, g, n) ? { e: Core.entry(S, g, n), m: false, s: [false, false] } : null);
   const finals = (D.finals || []).map(info).filter(Boolean), fn = finals.map(x => x.e.n), rest = T.filter(x => !fn.includes(x.e.n));
   const item = x => {
-    const marks = (x.m ? ['<span class="mark">Мэтч</span>'] : []).concat([0, 1].filter(p => x.s[p]).map(p => `<span class="mark"><i>★</i> ${esc(pl[p])}</span>`));
+    const gl = Object.keys(D.gv || {}).filter(id => D.gv[id][x.e.n] === 1 && S.guests[id]).map(id => S.guests[id].name);
+    const marks = (x.m ? ['<span class="mark">Мэтч</span>'] : []).concat([0, 1].filter(p => x.s[p]).map(p => `<span class="mark"><i>★</i> ${esc(pl[p])}</span>`))
+      .concat(gl.length ? [`<span class="mark"><i class="h">♥</i> Гости: ${gl.length}</span>`] : []);
     return `<div class="m">
       <div class="m-top"><b>${esc(x.e.n)}</b><button class="rm" type="button" data-rm="${esc(x.e.n)}">Убрать</button></div>
       <p class="full">${esc(fio(g, x.e.n))}</p>
       ${marks.length ? `<div class="marks">${marks.join('')}</div>` : ''}
+      ${gl.length ? `<p>Нравится гостям: ${esc(gl.join(', '))}</p>` : ''}
       ${x.e.f.length ? `<p>${esc(x.e.f.join(', '))}</p>` : ''}</div>`;
   };
   $('#m-sub').textContent = T.length ? `В топе для ${who}: ${T.length}. Мэтчей: ${T.filter(x => x.m).length}, с суперлайком: ${T.filter(x => x.s[0] || x.s[1]).length}.` : '';
@@ -161,17 +172,53 @@ function preview() {
   $('#pv-girl').textContent = `${femSurname(sur)} Алиса ${femPatr(patr)}`.trim();
 }
 function renderJoin() {
-  const f = $('#j-code');
-  if (!f.dataset.init) { f.dataset.init = 1; try { f.value = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''; } catch (e) {} }
+  const K = JOIN.peek, home = CTX.some(x => x.role === 'parent');   // K — приглашение по ссылке; home — своя комната уже есть
+  if (!JOIN.init) {
+    JOIN.init = 1; $('#j-code').value = K ? JOIN.code : '';
+    if (!$('#j-name').value) $('#j-name').value = tgName();
+  }
+  const asGuest = K ? K.kind === 'guest' : true, asParent = K ? K.kind === 'parent' : !home;
+  $('#j-title').textContent = K ? 'Вас пригласили' : 'Добро пожаловать';
+  $('#j-sub').textContent = !K ? 'Здесь двое выбирают имя малышу, а друзья и родные помогают голосованием.'
+    : K.kind === 'guest' ? `${K.title} выбирают имя малышу и зовут вас проголосовать.` : `${K.title === 'Новая комната' ? 'Вас зовут' : K.title + ' зовут вас'} выбирать имя вместе.`;
+  $('#j-code-f').hidden = !!K;
+  $('#j-parent').hidden = !asParent; $('#j-guest-f').hidden = $('#j-guest').hidden = !asGuest;
+  $('#j-0').hidden = !!(K && K.taken[0]); $('#j-1').hidden = !!(K && K.taken[1]);
+  $('#j-hint').textContent = home ? 'Введите гостевой код: он начинается с буквы G.' : 'Вы первый из пары? Оставьте поле пустым: создадим вашу комнату и дадим код для второго.';
+  $('#j-back').hidden = !JOIN.back;
+}
+/* гостевой экран: голосование по топу */
+let gKey = '';
+function renderGuest() {
+  const pl = players(), left = G.list.length, st = $('#gstack');
+  $('#g-title').textContent = 'Помогите выбрать имя';
+  $('#g-sub').textContent = `${pl[0]} и ${pl[1]} выбирают имя ${G.g === 'boy' ? 'мальчику' : 'девочке'}. Вправо — нравится, влево — нет.` + (left ? ` Осталось: ${left} из ${G.total}.` : '');
+  $('#g-actions').hidden = !left;
+  const key = [ROOM, G.g, left ? G.list[0].n : '', left > 1 ? G.list[1].n : '', G.total, G.liked.length].join('|');
+  if (key === gKey && (busy || st.firstElementChild)) return;
+  gKey = key;
+  if (!left) {
+    st.innerHTML = G.total
+      ? `<div class="empty"><h3>Спасибо${G.name ? ', ' + esc(G.name) : ''}!</h3><p>Вы оценили все имена. Если родители добавят новые, они появятся здесь.</p>${G.liked.length ? `<p>Вам понравились: ${esc(G.liked.join(', '))}</p>` : ''}</div>`
+      : `<div class="empty"><h3>Пока нечего оценивать</h3><p>Родители ещё выбирают. Загляните позже: имена появятся здесь.</p></div>`;
+    return;
+  }
+  st.innerHTML = (G.list[1] ? cardHTML(G.list[1], 'next') : '') + cardHTML(G.list[0], 'top');
+  bindCard(st.querySelector('.card.top'));
+}
+function renderRooms() {
+  $('#rooms-list').innerHTML = CTX.map(x => `<button class="rowbtn" type="button" data-room="${esc(x.id)}" aria-pressed="${x.id === ROOM}">
+    <b>${esc(x.title)}</b><span>${x.role === 'parent' ? 'ваша комната' : 'вы гость'}${x.id === ROOM ? ' · открыта сейчас' : ''}</span></button>`).join('');
 }
 function render() {
-  const show = FATAL ? 'fatal' : JOIN ? 'join' : !S ? 'fatal' : U.view;
-  ['form', 'deck', 'matches', 'join', 'fatal'].forEach(v => $('#v-' + v).hidden = v !== show);
-  $('#tabs').hidden = show === 'fatal' || show === 'join';
+  const show = FATAL ? 'fatal' : JOIN ? 'join' : G ? 'guest' : !S ? 'fatal' : U.view;
+  ['form', 'deck', 'matches', 'join', 'fatal', 'guest'].forEach(v => $('#v-' + v).hidden = v !== show);
+  $('#tabs').hidden = show === 'fatal' || show === 'join' || show === 'guest';
   $('#who').hidden = REMOTE || show !== 'deck';
   if (show === 'fatal') { $('#fatal-text').textContent = FATAL || 'Загружаем…'; return; }
   if (show === 'join') { renderJoin(); return; }
-  document.body.dataset.g = S.g;
+  document.body.dataset.g = curG();
+  if (show === 'guest') { renderGuest(); return; }
   document.querySelectorAll('#seg-g button').forEach(b => b.setAttribute('aria-pressed', b.dataset.g === S.g));
   const pl = players();
   document.querySelectorAll('#seg-p button').forEach(b => { b.textContent = pl[+b.dataset.p]; b.setAttribute('aria-pressed', +b.dataset.p === U.p); });
@@ -179,6 +226,15 @@ function render() {
   const mc = topList().length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
   $('#invite').hidden = !INVITE;
   if (INVITE) { $('#invite-code').textContent = INVITE; $('#inv-share').hidden = !(initData && BOT); }
+  $('#guest-box').hidden = !(REMOTE && GCODE);
+  if (REMOTE && GCODE) {
+    $('#guest-code').textContent = GCODE; $('#g-share').hidden = !(initData && BOT);
+    const T = topList(), gv = S.d[S.g].gv || {}, ids = Object.keys(S.guests || {});
+    $('#guest-list').innerHTML = ids.length
+      ? ids.map(id => `<p>${esc(S.guests[id].name)}: оценено ${T.filter(x => gv[id] && x.e.n in gv[id]).length} из ${T.length}</p>`).join('')
+      : '<p>Гостей пока нет.</p>';
+  }
+  $('#rooms-open').hidden = !REMOTE;
   const rb = $('#f-reset'); rb.dataset.label = REMOTE ? 'Сбросить всё у обоих: свайпы и свои имена' : 'Сбросить все свайпы и свои имена';
   if (!rb.armed()) rb.textContent = rb.dataset.label;
   if (show === 'deck') renderDeck();
@@ -229,9 +285,9 @@ function bindCard(el) {
   el.onpointerup = end; el.onpointercancel = end;
 }
 function fly(like, sup) {
-  if (busy || !S) return; const q = queue(); if (!q.length) return;
+  if (busy || !(S || G)) return; const q = queue(); if (!q.length) return;
   if (sup && !supOk()) return;
-  const el = $('.card.top'); if (!el || el.dataset.n !== q[0]) return;
+  const el = $('.view:not([hidden]) .card.top'); if (!el || el.dataset.n !== q[0]) return;
   busy = true;
   el.style.transition = 'transform .26s ease-in, opacity .26s';
   el.style.transform = sup ? 'translate(0,-640px)' : `translate(${like ? 520 : -520}px,40px) rotate(${like ? 24 : -24}deg)`; el.style.opacity = 0;
@@ -239,6 +295,10 @@ function fly(like, sup) {
   setTimeout(() => { busy = false; commit(q[0], like, sup); }, 240);
 }
 function commit(n, like, sup) {
+  if (G) {                       // гость: голос уходит на сервер, карточка убирается сразу
+    G.list = G.list.filter(e => e.n !== n); if (like) G.liked.push(n);
+    send({ t: 'gvote', n, like }); render(); return;
+  }
   const r = actNow({ t: 'vote', g: S.g, n, like, sup: !!sup, r2: !!r2q() }), ev = r.ev || {};
   if (ev.r2done !== undefined) {
     U.view = 'matches'; saveU();
@@ -259,9 +319,11 @@ $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) go(b.da
 $('#b-yes').onclick = () => fly(true);
 $('#b-no').onclick = () => fly(false);
 $('#b-sup').onclick = () => fly(true, true);
+$('#g-yes').onclick = () => fly(true);
+$('#g-no').onclick = () => fly(false);
 $('#b-undo').onclick = () => { if (busy) return; actNow({ t: 'undo', g: S.g, r2: !!r2q() }); render(); };
 document.addEventListener('keydown', e => {
-  if (!S || JOIN || U.view !== 'deck' || !$('#add').hidden || !$('#match').hidden || /INPUT/.test(e.target.tagName)) return;
+  if (!(S || G) || JOIN || (S && U.view !== 'deck') || !$('#add').hidden || !$('#match').hidden || !$('#rooms').hidden || /INPUT/.test(e.target.tagName)) return;
   if (e.key === 'ArrowRight') fly(true); if (e.key === 'ArrowLeft') fly(false); if (e.key === 'ArrowUp') fly(true, true);
 });
 $('#m-list').onclick = async e => {
@@ -301,22 +363,42 @@ const forgetSeen = () => { SEEN = { boy: [], girl: [] }; LS.set('nashe-imya-seen
 twoTap($('#f-resetme'), async () => { const r = await actWait({ t: 'resetme' }); if (!r.err) { forgetSeen(); deckKey = ''; render(); toast('Ваши свайпы сброшены, имена перемешаны заново'); } });
 twoTap($('#f-reset'), async () => { const r = await actWait({ t: 'reset' }); if (!r.err) { forgetSeen(); deckKey = ''; render(); toast('Свайпы и свои имена сброшены'); } });
 
-/* приглашение второго участника */
+/* приглашения: второму родителю и гостям */
 const botLink = () => BOT ? 'https://t.me/' + BOT : '';
-const inviteText = () => `Выбираем имя малышу вместе. ${BOT ? 'Открой бота ' + botLink() + ', нажми' : 'Нажми в боте'} «Открыть» и введи код приглашения: ${INVITE}`;
-$('#inv-copy').onclick = () => {
-  const text = inviteText(), done = () => toast('Приглашение скопировано'), fallback = () => {
+const deepLink = code => BOT ? 'https://t.me/' + BOT + '?startapp=' + code : '';
+const inviteText = link => `Выбираем имя малышу вместе.${link && BOT ? ' Открой ссылку: ' + deepLink(INVITE) : ''} Если ссылка не сработает: нажми в боте «Открыть» и введи код ${INVITE}`;
+const guestText = link => `Помоги нам выбрать имя малышу.${link && BOT ? ' Открой ссылку: ' + deepLink(GCODE) : ''} Если ссылка не сработает: нажми в боте «Открыть», введи код ${GCODE} и нажми «Я гость».`;
+function copyText(text, fallbackHint) {
+  const done = () => toast('Приглашение скопировано'), fallback = () => {
     const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
     document.body.appendChild(ta); ta.focus(); ta.select();
     let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
-    ta.remove(); ok ? done() : toast('Не получилось скопировать. Код: ' + INVITE);
+    ta.remove(); ok ? done() : toast('Не получилось скопировать. ' + fallbackHint);
   };
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
-};
-$('#inv-share').onclick = () => {
-  const url = 'https://t.me/share/url?url=' + encodeURIComponent(botLink()) + '&text=' + encodeURIComponent(`Выбираем имя малышу вместе. Нажми в боте «Открыть» и введи код приглашения: ${INVITE}`);
+}
+function shareText(text, code) {
+  const url = 'https://t.me/share/url?url=' + encodeURIComponent(deepLink(code)) + '&text=' + encodeURIComponent(text);
   try { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else tgEvent('web_app_open_tg_link', { path_full: url.replace('https://t.me', '') }); } catch (e) { toast('Не получилось открыть Telegram. Скопируйте приглашение.'); }
+}
+$('#inv-copy').onclick = () => copyText(inviteText(true), 'Код: ' + INVITE);
+$('#inv-share').onclick = () => shareText(inviteText(false), INVITE);
+$('#g-copy').onclick = () => copyText(guestText(true), 'Код: ' + GCODE);
+$('#g-share').onclick = () => shareText(guestText(false), GCODE);
+
+/* комнаты: своя и те, где вы гость */
+const openRooms = () => { renderRooms(); $('#rooms').hidden = false; };
+$('#rooms-open').onclick = openRooms; $('#g-rooms').onclick = openRooms;
+$('#rooms-close').onclick = () => $('#rooms').hidden = true;
+$('#rooms').onclick = e => { if (e.target.id === 'rooms') $('#rooms').hidden = true; };
+$('#rooms-add').onclick = () => { $('#rooms').hidden = true; $('#j-err').textContent = ''; JOIN = { back: true }; render(); };
+$('#rooms-list').onclick = async e => {
+  const b = e.target.closest('[data-room]'); if (!b) return;
+  $('#rooms').hidden = true; if (b.dataset.room === ROOM) return;
+  ROOM = b.dataset.room; deckKey = gKey = '';
+  try { const r = await api('GET', 'api/state'); take(r); if (S && U.view === 'form') renderForm(); } catch (x) { if (!FATAL) toast('Нет связи. Попробуйте ещё раз.'); }
 };
+$('#j-back').onclick = () => { JOIN = null; render(); };
 
 /* своё имя */
 $('#add-open').onclick = () => {
@@ -333,14 +415,16 @@ $('#add-form').onsubmit = async e => {
   toast(`«${r.ev.added}» добавлено. Ваш лайк стоит, имя скоро выпадет у ${players()[1 - U.p]}.`);
 };
 
-/* вход (только общий режим) */
+/* вход (только общий режим): родитель или гость */
 $('#v-join').onclick = async e => {
   const b = e.target.closest('[data-role]'); if (!b || b.disabled) return;
   $('#j-err').textContent = '';
   try {
-    const r = await api('POST', 'api/join', { role: +b.dataset.role, code: $('#j-code').value });
+    const role = b.dataset.role === 'guest' ? 'guest' : +b.dataset.role;
+    const r = await api('POST', 'api/join', { role, code: JOIN.peek ? JOIN.code : $('#j-code').value, name: $('#j-name').value });
     if (r.err) { $('#j-err').textContent = r.err; return; }
-    U.view = r.state.profile.example ? 'form' : 'deck'; saveU(); take(r); if (U.view === 'form') renderForm();
+    if (r.state) { U.view = r.state.profile.example ? 'form' : 'deck'; saveU(); }
+    deckKey = gKey = ''; take(r); if (S && U.view === 'form') renderForm();
   } catch (x) { if (!FATAL) $('#j-err').textContent = 'Нет связи. Попробуйте ещё раз.'; }
 };
 
@@ -359,12 +443,18 @@ async function startRemote() {
     if (tg && tg.initData) { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); }
     else if (initData) { tgEvent('web_app_ready'); tgEvent('web_app_expand'); tgEvent('web_app_setup_swipe_behavior', { allow_vertical_swipe: false }); }
     const r = await api('GET', 'api/state');
-    if (r.joined !== false && !LS.get('nashe-imya-ui')) U.view = r.state.profile.example ? 'form' : 'deck';
+    if (r.state && !LS.get('nashe-imya-ui')) U.view = r.state.profile.example ? 'form' : 'deck';
     take(r); if (S && U.view === 'form') renderForm();
+    const sp = startParam();                 // открыли по ссылке-приглашению
+    if (sp) {
+      const k = await api('GET', 'api/peek?code=' + encodeURIComponent(sp));
+      if (k.found && k.member) { if (k.room !== ROOM) { ROOM = k.room; take(await api('GET', 'api/state')); if (S && U.view === 'form') renderForm(); } }
+      else if (k.found) { JOIN = { back: CTX.length > 0, peek: k, code: sp }; render(); }
+    }
   } catch (e) { if (!FATAL) { FATAL = 'Нет связи с сервером. Проверьте интернет и откройте приложение заново.'; render(); } }
   const poll = () => {
-    if (FATAL || document.hidden || pending) return;
-    api('GET', 'api/state?v=' + (JOIN ? 0 : V)).then(r => { if (!r.same && !pending) take(r, true); }).catch(() => {});
+    if (FATAL || document.hidden || pending || (JOIN && JOIN.back)) return;
+    api('GET', 'api/state?v=' + (JOIN ? 0 : V) + '&r=' + encodeURIComponent(ROOM)).then(r => { if (!r.same && !pending) take(r, true); }).catch(() => {});
   };
   setInterval(poll, 4000);
   document.addEventListener('visibilitychange', poll);

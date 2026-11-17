@@ -20,20 +20,27 @@ const PAGE = '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
   + (TGJS ? '<script src="tg.js"></script>' : '') + '</head><body>'
   + (HAS_FONTS ? src.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/, '<link rel="stylesheet" href="fonts/fonts.css">') : src) + '</body></html>';
 
-/* Хранилище: у каждой пары своя комната = один файл data/rooms/КОД.json. Код комнаты — он же код приглашения. */
+/* Хранилище: у каждой пары своя комната = один файл data/rooms/КОД.json.
+   Код комнаты (6 знаков) — приглашение для второго родителя. Гостевой код (G + 6 знаков) — для друзей и родных. */
 const ROOMS = path.join(DATA, 'rooms'), USERS = path.join(DATA, 'users.json');
 const MAX_ROOMS = +process.env.MAX_ROOMS || 10;   // сколько пар может завести комнату
+const MAX_GUESTS = 30;                            // гостей на одну комнату
 fs.mkdirSync(ROOMS, { recursive: true });
 const code = () => Array.from(crypto.randomBytes(6), b => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[b % 31]).join('');
 function write(file, obj) { fs.writeFileSync(file + '.tmp', JSON.stringify(obj)); fs.renameSync(file + '.tmp', file); }
-let users = {}; try { users = JSON.parse(fs.readFileSync(USERS, 'utf8')); } catch (e) {}
-const cache = new Map();
-function room(id) {
-  if (!/^[A-Z0-9]{6}$/.test(id || '')) return null;
-  if (cache.has(id)) return cache.get(id);
-  try { const r = JSON.parse(fs.readFileSync(path.join(ROOMS, id + '.json'), 'utf8')); Core.migrate(r.state); cache.set(id, r); return r; } catch (e) { return null; }
-}
 const save = r => write(path.join(ROOMS, r.id + '.json'), r);
+let users = {}; try { users = JSON.parse(fs.readFileSync(USERS, 'utf8')); } catch (e) {}
+/* у человека может быть одна своя комната (home) и сколько угодно комнат, где он гость */
+function who(uid) { let x = users[uid]; if (typeof x === 'string') x = users[uid] = { home: x, guest: [] }; return x || { home: null, guest: [] }; }
+const cache = new Map(), gindex = new Map();
+function prep(r) {
+  Core.migrate(r.state); r.guestIds = r.guestIds || {}; r.gseq = r.gseq || 0;
+  const fresh = !r.gcode; if (fresh) { do r.gcode = 'G' + code(); while (gindex.has(r.gcode)); }
+  cache.set(r.id, r); gindex.set(r.gcode, r.id); if (fresh) save(r);
+  return r;
+}
+for (const f of fs.readdirSync(ROOMS)) if (f.endsWith('.json')) { try { prep(JSON.parse(fs.readFileSync(path.join(ROOMS, f), 'utf8'))); } catch (e) { console.error('Не читается комната ' + f); } }
+const room = id => cache.get(id) || null;
 
 /* Кто пришёл. Telegram подписывает данные о пользователе токеном бота — подделать их без токена нельзя. */
 function whoIs(req) {
@@ -59,8 +66,25 @@ async function askBot() {
   if (!BOT) setTimeout(askBot, 60000).unref();
 }
 askBot();
-function snap(r, p) {
-  return { joined: true, p, v: r.v, state: r.state, invite: r.members.includes(null) ? r.id : null, bot: BOT };
+const title = r => { const P = r.state.profile; return P.example ? 'Новая комната' : P.dad + ' и ' + P.mom; };
+function ctxOf(uid) {
+  const info = who(uid), list = [];
+  if (info.home && room(info.home)) list.push({ id: info.home, role: 'parent', title: title(room(info.home)) });
+  for (const id of info.guest) if (room(id)) list.push({ id, role: 'guest', title: title(room(id)) });
+  return list;
+}
+/* В какой комнате человек сейчас: та, что открыта на его устройстве, иначе первая из его комнат */
+function resolve(req, uid) {
+  const ctx = ctxOf(uid), c = ctx.find(x => x.id === String(req.headers['x-room'] || '')) || ctx[0];
+  if (!c) return null;
+  const r = room(c.id);
+  if (c.role === 'parent') { const p = r.members.findIndex(m => m && m.id === uid); return p < 0 ? null : { r, p, ctx }; }
+  return r.guestIds[uid] ? { r, gid: r.guestIds[uid], ctx } : null;
+}
+function snap(c) {
+  const r = c.r, base = { joined: true, room: r.id, v: r.v, bot: BOT, ctx: c.ctx };
+  return c.gid ? Object.assign(base, { guest: true, gview: Core.gview(r.state, c.gid) })
+    : Object.assign(base, { p: c.p, state: r.state, invite: r.members.includes(null) ? r.id : null, gcode: r.gcode });
 }
 function body(req) {
   return new Promise((res, rej) => {
@@ -88,38 +112,63 @@ http.createServer(async (req, res) => {
 
     const u = whoIs(req);
     if (!u) return json(res, 401, { err: 'Нет входа через Telegram.' });
-    const r = room(users[u.id]), p = r ? r.members.findIndex(m => m && m.id === u.id) : -1;
+    const uid = u.id, c = resolve(req, uid);
 
     if (route === 'GET /api/state') {
-      if (p < 0) return json(res, 200, { joined: false });
-      return json(res, 200, +url.searchParams.get('v') === r.v ? { same: true } : snap(r, p));
+      if (!c) return json(res, 200, { joined: false, ctx: [] });
+      return json(res, 200, +url.searchParams.get('v') === c.r.v && url.searchParams.get('r') === c.r.id ? { same: true } : snap(c));
+    }
+    /* Что за код пришёл по ссылке: чья комната, гостевой он или для второго родителя, состоит ли в ней человек */
+    if (route === 'GET /api/peek') {
+      const k = String(url.searchParams.get('code') || '').trim().toUpperCase();
+      const g = room(gindex.get(k)), t = g || room(k);
+      if (!t) return json(res, 200, { found: false });
+      const seat = t.members.findIndex(m => m && m.id === uid);
+      return json(res, 200, { found: true, kind: g ? 'guest' : 'parent', room: t.id, title: title(t), member: seat >= 0 || !!t.guestIds[uid], taken: t.members.map(Boolean) });
     }
     if (route === 'POST /api/join') {
-      if (p >= 0) return json(res, 200, snap(r, p));
-      const b = await body(req), role = b.role === 1 ? 1 : 0, c = String(b.code || '').trim().toUpperCase();
-      let t;
-      if (c) {
-        t = room(c);
-        if (!t) return json(res, 200, { joined: false, err: 'Комната с таким кодом не найдена. Проверьте код.' });
-        if (!t.members.includes(null)) return json(res, 200, { joined: false, err: 'В этой комнате уже двое.' });
-        if (t.members[role]) return json(res, 200, { joined: false, err: 'Эта роль в комнате уже занята. Выберите другую.' });
-      } else {
-        if (fs.readdirSync(ROOMS).filter(f => f.endsWith('.json')).length >= MAX_ROOMS) return json(res, 200, { joined: false, err: 'Свободных комнат пока нет. Если вас пригласили, введите код приглашения.' });
-        let id = code(); while (room(id)) id = code();
-        t = { id, v: 1, members: [null, null], state: Core.fresh(), at: Date.now() }; cache.set(id, t);
+      const b = await body(req), k = String(b.code || '').trim().toUpperCase(), info = who(uid), no = err => json(res, 200, { joined: false, err });
+      const done = t => json(res, 200, snap(resolve({ headers: { 'x-room': t.id } }, uid)));
+      if (b.role === 'guest') {
+        const t = room(gindex.get(k));
+        if (!t) return no(room(k) ? 'Это код для второго родителя. Гостевой код начинается с буквы G.' : 'Гостевой код не найден. Проверьте код.');
+        if (t.members.some(m => m && m.id === uid)) return no('Это ваша собственная комната: вы в ней родитель.');
+        if (t.guestIds[uid]) return done(t);
+        const name = String(b.name || '').trim().replace(/\s+/g, ' ').slice(0, 30);
+        if (!name) return no('Напишите, как вас подписать: так родители поймут, чей это голос.');
+        if (Object.keys(t.guestIds).length >= MAX_GUESTS) return no('В этой комнате уже слишком много гостей.');
+        const gid = 'g' + (++t.gseq);
+        t.guestIds[uid] = gid; t.state.guests[gid] = { name }; t.v++; save(t);
+        info.guest.push(t.id); users[uid] = info; write(USERS, users);
+        return done(t);
       }
-      t.members[role] = { id: u.id, at: Date.now() }; t.v++; save(t);
-      users[u.id] = t.id; write(USERS, users);
-      return json(res, 200, snap(t, role));
+      const role = b.role === 1 ? 1 : 0;
+      if (info.home && room(info.home)) return no('У вас уже есть своя комната. В другие можно войти только гостем.');
+      let t;
+      if (k) {
+        if (gindex.has(k)) return no('Это гостевой код. Напишите своё имя и нажмите «Я гость».');
+        t = room(k);
+        if (!t) return no('Комната с таким кодом не найдена. Проверьте код.');
+        if (!t.members.includes(null)) return no('В этой комнате уже двое родителей.');
+        if (t.members[role]) return no('Эта роль в комнате уже занята. Выберите другую.');
+        if (t.guestIds[uid]) return no('Вы уже гость в этой комнате.');
+      } else {
+        if (cache.size >= MAX_ROOMS) return no('Свободных комнат пока нет. Если вас пригласили, введите код приглашения.');
+        let id = code(); while (room(id)) id = code();
+        t = prep({ id, v: 1, members: [null, null], state: Core.fresh(), at: Date.now() });
+      }
+      t.members[role] = { id: uid, at: Date.now() }; t.v++; save(t);
+      info.home = t.id; users[uid] = info; write(USERS, users);
+      return done(t);
     }
     if (route === 'POST /api/act') {
-      if (p < 0) return json(res, 200, { joined: false });
+      if (!c) return json(res, 200, { joined: false, ctx: [] });
       const b = await body(req), a = b && b.a;
       if (!a || typeof a !== 'object') return json(res, 400, { err: 'Пустой запрос.' });
-      const out = Core.apply(r.state, p, a);
-      if (out.err) return json(res, 200, Object.assign(snap(r, p), { err: out.err }));
-      r.v++; save(r);
-      return json(res, 200, Object.assign(snap(r, p), { ok: 1, ev: out.ev }));
+      const out = c.gid ? Core.gapply(c.r.state, c.gid, a) : Core.apply(c.r.state, c.p, a);
+      if (out.err) return json(res, 200, Object.assign(snap(c), { err: out.err }));
+      c.r.v++; save(c.r);
+      return json(res, 200, Object.assign(snap(c), { ok: 1, ev: out.ev }));
     }
     json(res, 404, { err: 'Нет такого адреса.' });
   } catch (e) { json(res, 400, { err: 'Ошибка запроса.' }); }

@@ -43,17 +43,19 @@ function mix(g, custom) {
   for (const s in groups) shuffle(groups[s]).forEach((n, i, a) => keyed.push([(i + Math.random()) / a.length, n]));
   return keyed.sort((x, y) => x[0] - y[0]).map(x => x[1]);
 }
-function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null, sup: [{}, {}], rn: 1 }; }
+function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null, sup: [{}, {}], rn: 1, gv: {} }; }
 function fresh() {
   return { profile: { surname: 'Иванов', dad: 'Андрей', patr: 'Андреевич', mom: 'Окси', example: true },
-    g: 'boy', sets: { r: 1, o: 1, i: 1, e: 1 }, d: { boy: mk('boy'), girl: mk('girl') } };
+    g: 'boy', sets: { r: 1, o: 1, i: 1, e: 1 }, guests: {}, d: { boy: mk('boy'), girl: mk('girl') } };
 }
 function migrate(S) {
   if (!S.sets) S.sets = { r: 1, o: 1, i: 1, e: 1 };
   if (S.sets.e === undefined) S.sets.e = 1;
+  if (!S.guests) S.guests = {};
   for (const g in BASE) {
     const D = S.d[g], names = BASE[g].map(e => e.n).concat((D.custom || []).map(e => { e.c = 1; return e.n; }));
     if (!D.sup) D.sup = [{}, {}];
+    if (!D.gv) D.gv = {};
     if (!D.rn) D.rn = D.r2 || D.finals ? 2 : 1;
     D.order.forEach((o, p) => { const has = new Set(o), add = shuffle(names.filter(n => !has.has(n))); if (add.length) D.order[p] = o.concat(add); });
   }
@@ -87,6 +89,21 @@ function findDup(S, g, input) {
   for (const e of all(S, g)) if (norm(e.n) === x) return { e, via: null };
   for (const e of all(S, g)) for (const f of e.f) if (norm(f) === x) return { e, via: f };
   return null;
+}
+/* ---------- гости: голосуют только по топу, каждое имя один раз ---------- */
+function hsh(s) { let x = 2166136261; for (let i = 0; i < s.length; i++) x = Math.imul(x ^ s.charCodeAt(i), 16777619); return x >>> 0; }
+/* То, что видит гость: без чужих голосов и без выбора родителей */
+function gview(S, gid) {
+  const g = S.g, mine = S.d[g].gv[gid] || {}, t = top(S, g), P = S.profile;
+  return { g, profile: { surname: P.surname, patr: P.patr, dad: P.dad, mom: P.mom, example: !!P.example },
+    list: t.filter(x => !(x.e.n in mine)).map(x => ({ n: x.e.n, f: x.e.f, s: x.e.s, c: x.e.c })).sort((a, b) => hsh(gid + a.n) - hsh(gid + b.n)),
+    total: t.length, liked: t.filter(x => mine[x.e.n] === 1).map(x => x.e.n), name: (S.guests[gid] || {}).name || '' };
+}
+function gapply(S, gid, a) {
+  if (a.t !== 'gvote') return { err: 'Неизвестное действие.' };
+  const g = S.g, D = S.d[g], n = String(a.n), mine = D.gv[gid] || (D.gv[gid] = {});
+  if (top(S, g).some(x => x.e.n === n) && !(n in mine)) mine[n] = a.like ? 1 : 0;
+  return { ok: 1, ev: {} };
 }
 /* Единственное место, где меняется состояние. p: 0 — папа, 1 — мама. */
 function apply(S, p, a) {
@@ -160,4 +177,4 @@ function apply(S, p, a) {
   }
   return { err: 'Неизвестное действие.' };
 }
-return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply, top, supLeft, supQuota };
+return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply, top, supLeft, supQuota, gview, gapply };
