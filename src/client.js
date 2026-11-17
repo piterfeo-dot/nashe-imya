@@ -39,7 +39,7 @@ function take(resp, fromPoll) {
   if (!resp.state) return;
   const had = !!(S && S.d[S.g].r2);
   JOIN = null; S = resp.state; V = resp.v; INVITE = resp.invite || null; BOT = resp.bot || ''; U.p = resp.p;
-  if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает второй круг: ${S.d[S.g].r2.names.length} имён.`);
+  if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает ${S.d[S.g].rn}-й круг: ${S.d[S.g].r2.names.length} имён.`);
   render();
 }
 function send(a) {
@@ -60,7 +60,8 @@ async function actWait(a) {
 const players = () => [S.profile.dad || 'Папа', S.profile.mom || 'Мама'];
 const queue = () => Core.queue(S, U.p);
 const r2q = () => Core.r2q(S, U.p);
-const matches = g => Core.matches(S, g);
+const topList = () => Core.top(S, S.g);
+const supOk = () => Core.supLeft(S, S.g, U.p) > 0 && !(S.d[S.g].r2 && !r2q());   // пока идёт круг, суперлайк только на его карточках
 function fio(g, n) {
   const P = S.profile;
   return g === 'boy' ? `${P.surname} ${n} ${P.patr}` : `${femSurname(P.surname)} ${n} ${femPatr(P.patr)}`;
@@ -81,9 +82,9 @@ function cardHTML(e, cls) {
     : e.c ? `<div class="forms"><span class="lbl">Это имя добавили вы</span></div>` : '';
   return `<article class="card ${cls}" data-n="${esc(e.n)}">
     <span class="wm" aria-hidden="true">${esc(e.n[0])}</span>
-    <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span>
+    <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span><span class="stamp sup">★ Суперлайк</span>
     <div class="card-main">
-      <span class="lbl">${r2q() ? 'Второй круг' : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
+      <span class="lbl">${r2q() ? S.d[g].rn + '-й круг' : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
       <h2 style="font-size:${nameSize(e.n)}px">${esc(e.n)}</h2>
       <p class="fio">${esc(fio(g, e.n))}</p>
       <p class="ini">В документах: ${esc(initials(g, e.n))}</p>
@@ -91,10 +92,11 @@ function cardHTML(e, cls) {
 }
 function renderDeck() {
   const q = queue(), st = $('#stack'), D = S.d[S.g], r2m = !!r2q();
-  $('#left').textContent = r2m ? `Второй круг: осталось ${q.length}` : q.length ? `Осталось имён: ${q.length}` : '';
+  $('#left').textContent = r2m ? `${D.rn}-й круг: осталось ${q.length}` : q.length ? `Осталось имён: ${q.length}` : '';
   $('#add-open').hidden = r2m;
   $('#b-no').disabled = $('#b-yes').disabled = !q.length;
   $('#b-undo').disabled = !(r2m ? D.r2.hist[U.p] : D.hist[U.p]).length;
+  $('#sup-left').textContent = Core.supLeft(S, S.g, U.p); $('#b-sup').disabled = !q.length || !supOk();
   const key = [S.g, U.p, r2m, q[0], q[1], JSON.stringify(S.profile)].join('|');
   if (key === deckKey && (busy || st.firstElementChild)) return;   // не перерисовываем карточку, которую сейчас тянут
   deckKey = key;
@@ -107,32 +109,36 @@ function renderDeck() {
   bindCard(st.querySelector('.card.top'));
 }
 function renderMatches() {
-  const D = S.d[S.g], ms = matches(S.g), who = S.g === 'boy' ? 'мальчика' : 'девочки', pl = players();
-  const finals = (D.finals || []).filter(n => ms.some(e => e.n === n));
-  const item = e => `<div class="m">
-      <div class="m-top"><b>${esc(e.n)}</b><button class="rm" type="button" data-rm="${esc(e.n)}">Убрать</button></div>
-      <p class="full">${esc(fio(S.g, e.n))}</p>
-      ${e.f.length ? `<p>${esc(e.f.join(', '))}</p>` : ''}</div>`;
-  $('#m-sub').textContent = ms.length ? `Имена для ${who}, которые нравятся вам обоим: ${ms.length}` : '';
-  if (!ms.length) {
-    $('#m-list').innerHTML = `<div class="empty"><h3>Пока нет мэтчей для ${who}</h3><p>Мэтч появится, когда вы оба поставите лайк одному имени.</p></div>`;
+  const g = S.g, D = S.d[g], T = topList(), who = g === 'boy' ? 'мальчика' : 'девочки', pl = players();
+  const info = n => T.find(x => x.e.n === n) || (Core.entry(S, g, n) ? { e: Core.entry(S, g, n), m: false, s: [false, false] } : null);
+  const finals = (D.finals || []).map(info).filter(Boolean), fn = finals.map(x => x.e.n), rest = T.filter(x => !fn.includes(x.e.n));
+  const item = x => {
+    const marks = (x.m ? ['<span class="mark">Мэтч</span>'] : []).concat([0, 1].filter(p => x.s[p]).map(p => `<span class="mark"><i>★</i> ${esc(pl[p])}</span>`));
+    return `<div class="m">
+      <div class="m-top"><b>${esc(x.e.n)}</b><button class="rm" type="button" data-rm="${esc(x.e.n)}">Убрать</button></div>
+      <p class="full">${esc(fio(g, x.e.n))}</p>
+      ${marks.length ? `<div class="marks">${marks.join('')}</div>` : ''}
+      ${x.e.f.length ? `<p>${esc(x.e.f.join(', '))}</p>` : ''}</div>`;
+  };
+  $('#m-sub').textContent = T.length ? `В топе для ${who}: ${T.length}. Мэтчей: ${T.filter(x => x.m).length}, с суперлайком: ${T.filter(x => x.s[0] || x.s[1]).length}.` : '';
+  if (!T.length && !finals.length) {
+    $('#m-list').innerHTML = `<div class="empty"><h3>Топ для ${who} пока пуст</h3><p>Сюда попадают мэтчи — имена, которые лайкнули вы оба, — и имена с суперлайком.</p></div>`;
     return;
   }
   let ctl = '';
   if (D.r2) {
     const st = p => { const l = D.r2.names.filter(n => !(n in D.r2.votes[p])).length; return `${esc(pl[p])}: ${l ? 'осталось ' + l : 'готово'}`; };
-    ctl = `<p class="note">Идёт второй круг. ${st(0)}. ${st(1)}.</p>
-      <button class="btn ghost" type="button" data-act="r2cancel">Отменить второй круг</button>`;
+    ctl = `<p class="note">Идёт ${D.rn}-й круг. ${st(0)}. ${st(1)}.</p>
+      <button class="btn ghost" type="button" data-act="r2cancel">Отменить этот круг</button>`;
   } else {
-    const pool = finals.length >= 2 ? finals.length : ms.length;
-    if (pool >= 2) ctl = `<button class="btn" type="button" data-act="r2start">${finals.length >= 2 ? 'Ещё один круг среди финалистов' : 'Начать второй круг'}</button>
-      <p class="sub">Каждый заново свайпает ${pool} ${finals.length >= 2 ? 'финалистов' : 'мэтчей'}. Останутся имена, которые снова понравятся обоим.</p>`;
-    if (finals.length) ctl += `<button class="btn ghost" type="button" data-act="r2clear">Сбросить финалистов</button>`;
+    const next = (D.rn || 1) + 1, pool = finals.length >= 2 ? finals.length + rest.filter(x => x.s[0] || x.s[1]).length : T.length;
+    if (pool >= 2) ctl = `<button class="btn" type="button" data-act="r2start">Начать ${next}-й круг</button>
+      <p class="sub">Каждый заново свайпает ${pool} имён. Останутся те, что снова понравятся обоим, и имена с новым суперлайком. Старые суперлайки сгорают, на ${next}-й круг у каждого их ${Core.supQuota(next)}.</p>`;
+    if (finals.length) ctl += `<button class="btn ghost" type="button" data-act="r2clear">Сбросить круги и суперлайки</button>`;
   }
-  const rest = ms.filter(e => !finals.includes(e.n));
   $('#m-list').innerHTML = ctl
-    + (finals.length ? `<span class="lbl">Финалисты второго круга</span>` + ms.filter(e => finals.includes(e.n)).map(item).join('') : '')
-    + (finals.length && rest.length ? `<span class="lbl">Остальные мэтчи</span>` : '')
+    + (finals.length ? `<span class="lbl">Финалисты после ${D.r2 ? D.rn - 1 : D.rn}-го круга</span>` + finals.map(item).join('') : '')
+    + (finals.length && rest.length ? `<span class="lbl">Остальной топ</span>` : '')
     + rest.map(item).join('');
 }
 let patrManual = false;
@@ -170,7 +176,7 @@ function render() {
   const pl = players();
   document.querySelectorAll('#seg-p button').forEach(b => { b.textContent = pl[+b.dataset.p]; b.setAttribute('aria-pressed', +b.dataset.p === U.p); });
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === U.view));
-  const mc = matches(S.g).length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
+  const mc = topList().length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
   $('#invite').hidden = !INVITE;
   if (INVITE) { $('#invite-code').textContent = INVITE; $('#inv-share').hidden = !(initData && BOT); }
   const rb = $('#f-reset'); rb.dataset.label = REMOTE ? 'Сбросить всё у обоих: свайпы и свои имена' : 'Сбросить все свайпы и свои имена';
@@ -185,43 +191,60 @@ function go(view) { U.view = view; saveU(); if (view === 'form') renderForm(); r
 /* ---------- мэтч: показываем каждому, кто его ещё не видел ---------- */
 function checkMatches() {
   if (!$('#match').hidden) return;
-  const seen = SEEN[S.g] || (SEEN[S.g] = []), e = matches(S.g).find(x => !seen.includes(x.n));
-  if (!e) return;
-  seen.push(e.n); LS.set('nashe-imya-seen', SEEN);
-  const pl = players();
-  $('#match-who').textContent = `${pl[0]} и ${pl[1]} выбрали`;
-  $('#match-name').textContent = e.n; $('#match-fio').textContent = fio(S.g, e.n);
-  $('#match').hidden = false; $('#match-next').focus();
-  try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (x) {}
+  const seen = SEEN[S.g] || (SEEN[S.g] = []), pl = players();
+  const show = (key, title, who, n) => {
+    seen.push(key); LS.set('nashe-imya-seen', SEEN);
+    $('#match-title').textContent = title; $('#match-who').textContent = who;
+    $('#match-name').textContent = n; $('#match-fio').textContent = fio(S.g, n);
+    $('#match').hidden = false; $('#match-next').focus();
+    try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (x) {}
+  };
+  for (const x of topList()) {
+    const n = x.e.n;
+    if (x.m && !seen.includes(n)) return show(n, 'Это мэтч!', `${pl[0]} и ${pl[1]} выбрали`, n);
+    if (REMOTE && !x.m && x.s[1 - U.p] && !seen.includes('★' + n)) return show('★' + n, 'Суперлайк!', `${pl[1 - U.p]}: очень хочу это имя`, n);
+  }
 }
 
 /* ---------- свайпы ---------- */
-function setStamp(el, dx) {
-  el.querySelector('.stamp.yes').style.opacity = Math.max(0, Math.min(1, dx / 90));
-  el.querySelector('.stamp.no').style.opacity = Math.max(0, Math.min(1, -dx / 90));
+function setStamp(el, dx, dy) {
+  const c = v => Math.max(0, Math.min(1, v)), up = dy !== undefined && -dy > Math.abs(dx) && supOk() ? c(-dy / 110) : 0;
+  el.querySelector('.stamp.yes').style.opacity = up ? 0 : c(dx / 90);
+  el.querySelector('.stamp.no').style.opacity = up ? 0 : c(-dx / 90);
+  el.querySelector('.stamp.sup').style.opacity = up;
 }
 function bindCard(el) {
-  let sx = 0, sy = 0, dx = 0, drag = false;
-  el.onpointerdown = e => { if (busy) return; drag = true; sx = e.clientX; sy = e.clientY; dx = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} el.style.transition = 'none'; };
-  el.onpointermove = e => { if (!drag) return; dx = e.clientX - sx; el.style.transform = `translate(${dx}px,${(e.clientY - sy) * .25}px) rotate(${dx / 20}deg)`; setStamp(el, dx); };
-  const end = () => { if (!drag) return; drag = false; el.style.transition = ''; if (Math.abs(dx) > 90) fly(dx > 0); else { el.style.transform = ''; setStamp(el, 0); } };
+  let sx = 0, sy = 0, dx = 0, dy = 0, drag = false;
+  el.onpointerdown = e => { if (busy) return; drag = true; sx = e.clientX; sy = e.clientY; dx = dy = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} el.style.transition = 'none'; };
+  el.onpointermove = e => {
+    if (!drag) return; dx = e.clientX - sx; dy = e.clientY - sy;
+    el.style.transform = `translate(${dx}px,${dy < 0 ? dy * .7 : dy * .25}px) rotate(${dx / 20}deg)`; setStamp(el, dx, dy);
+  };
+  const end = () => {
+    if (!drag) return; drag = false; el.style.transition = '';
+    if (-dy > 110 && Math.abs(dx) < 90 && supOk()) fly(true, true);      // свайп вверх — суперлайк
+    else if (Math.abs(dx) > 90) fly(dx > 0);
+    else { el.style.transform = ''; setStamp(el, 0, 0); }
+  };
   el.onpointerup = end; el.onpointercancel = end;
 }
-function fly(like) {
+function fly(like, sup) {
   if (busy || !S) return; const q = queue(); if (!q.length) return;
+  if (sup && !supOk()) return;
   const el = $('.card.top'); if (!el || el.dataset.n !== q[0]) return;
   busy = true;
   el.style.transition = 'transform .26s ease-in, opacity .26s';
-  el.style.transform = `translate(${like ? 520 : -520}px,40px) rotate(${like ? 24 : -24}deg)`; el.style.opacity = 0;
-  setStamp(el, like ? 200 : -200);
-  setTimeout(() => { busy = false; commit(q[0], like); }, 240);
+  el.style.transform = sup ? 'translate(0,-640px)' : `translate(${like ? 520 : -520}px,40px) rotate(${like ? 24 : -24}deg)`; el.style.opacity = 0;
+  if (sup) setStamp(el, 0, -200); else setStamp(el, like ? 200 : -200, 0);
+  setTimeout(() => { busy = false; commit(q[0], like, sup); }, 240);
 }
-function commit(n, like) {
-  const r = actNow({ t: 'vote', g: S.g, n, like, r2: !!r2q() }), ev = r.ev || {};
+function commit(n, like, sup) {
+  const r = actNow({ t: 'vote', g: S.g, n, like, sup: !!sup, r2: !!r2q() }), ev = r.ev || {};
   if (ev.r2done !== undefined) {
     U.view = 'matches'; saveU();
-    toast(ev.r2done ? `Второй круг завершён. Финалистов: ${ev.r2done}` : 'Второй круг завершён. Общих имён не осталось, мэтчи на месте.');
-  } else if (ev.r2mine) toast(`Вы прошли второй круг. Теперь очередь: ${players()[1 - U.p]}.`);
+    toast(ev.r2done ? `Круг завершён. Финалистов: ${ev.r2done}` : 'Круг завершён. Общих имён не осталось, топ на месте.');
+  } else if (ev.r2mine) toast(`Вы прошли круг. Теперь очередь: ${players()[1 - U.p]}.`);
+  else if (ev.nosup) toast('Суперлайки закончились, поставлен обычный лайк');
   render();
 }
 
@@ -235,22 +258,23 @@ $('#seg-p').onclick = e => { const b = e.target.closest('button'); if (!b) retur
 $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); };
 $('#b-yes').onclick = () => fly(true);
 $('#b-no').onclick = () => fly(false);
+$('#b-sup').onclick = () => fly(true, true);
 $('#b-undo').onclick = () => { if (busy) return; actNow({ t: 'undo', g: S.g, r2: !!r2q() }); render(); };
 document.addEventListener('keydown', e => {
   if (!S || JOIN || U.view !== 'deck' || !$('#add').hidden || !$('#match').hidden || /INPUT/.test(e.target.tagName)) return;
-  if (e.key === 'ArrowRight') fly(true); if (e.key === 'ArrowLeft') fly(false);
+  if (e.key === 'ArrowRight') fly(true); if (e.key === 'ArrowLeft') fly(false); if (e.key === 'ArrowUp') fly(true, true);
 });
 $('#m-list').onclick = async e => {
   const a = e.target.closest('[data-act]');
   if (a) {
     const act = a.dataset.act, r = await actWait({ t: act, g: S.g });
     if (r.err) { toast(r.err); return; }
-    if (act === 'r2start') { toast(`Второй круг начался: ${r.ev.r2start} имён. ${REMOTE ? 'Свайпайте каждый у себя.' : 'Свайпайте по очереди.'}`); go('deck'); }
-    if (act === 'r2cancel') toast('Второй круг отменён');
+    if (act === 'r2start') { toast(`Круг начался: ${r.ev.r2start} имён. ${REMOTE ? 'Свайпайте каждый у себя.' : 'Свайпайте по очереди.'}`); go('deck'); }
+    if (act === 'r2cancel') toast('Круг отменён, суперлайки возвращены');
     return;
   }
   const b = e.target.closest('[data-rm]'); if (!b) return;
-  const r = await actWait({ t: 'unmatch', g: S.g, n: b.dataset.rm }); if (!r.err) toast(`«${b.dataset.rm}» убрано из мэтчей`);
+  const r = await actWait({ t: 'unmatch', g: S.g, n: b.dataset.rm }); if (!r.err) toast(`«${b.dataset.rm}» убрано из топа`);
 };
 $('#match-next').onclick = () => { $('#match').hidden = true; checkMatches(); };
 $('#match-open').onclick = () => { $('#match').hidden = true; go('matches'); };

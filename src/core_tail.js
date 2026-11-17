@@ -43,7 +43,7 @@ function mix(g, custom) {
   for (const s in groups) shuffle(groups[s]).forEach((n, i, a) => keyed.push([(i + Math.random()) / a.length, n]));
   return keyed.sort((x, y) => x[0] - y[0]).map(x => x[1]);
 }
-function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null }; }
+function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null, sup: [{}, {}], rn: 1 }; }
 function fresh() {
   return { profile: { surname: 'Иванов', dad: 'Андрей', patr: 'Андреевич', mom: 'Окси', example: true },
     g: 'boy', sets: { r: 1, o: 1, i: 1, e: 1 }, d: { boy: mk('boy'), girl: mk('girl') } };
@@ -53,6 +53,8 @@ function migrate(S) {
   if (S.sets.e === undefined) S.sets.e = 1;
   for (const g in BASE) {
     const D = S.d[g], names = BASE[g].map(e => e.n).concat((D.custom || []).map(e => { e.c = 1; return e.n; }));
+    if (!D.sup) D.sup = [{}, {}];
+    if (!D.rn) D.rn = D.r2 || D.finals ? 2 : 1;
     D.order.forEach((o, p) => { const has = new Set(o), add = shuffle(names.filter(n => !has.has(n))); if (add.length) D.order[p] = o.concat(add); });
   }
   return S;
@@ -72,6 +74,14 @@ function queue(S, p) {
   return ord.filter(n => !(n in v));
 }
 const matches = (S, g) => all(S, g).filter(e => S.d[g].votes[0][e.n] === 1 && S.d[g].votes[1][e.n] === 1);
+/* Суперлайки: сколько даётся каждому на круг (1-й, 2-й, 3-й, 4-й и дальше) */
+const SUP = [10, 5, 3, 1];
+const supQuota = rn => SUP[Math.min(rn || 1, SUP.length) - 1];
+const supLeft = (S, g, p) => Math.max(0, supQuota(S.d[g].rn) - Object.keys(S.d[g].sup[p]).length);
+/* Топ: мэтчи плюс имена с суперлайком хотя бы одного из двоих. m — мэтч, s — чей суперлайк */
+const top = (S, g) => { const D = S.d[g]; return all(S, g)
+  .map(e => ({ e, m: D.votes[0][e.n] === 1 && D.votes[1][e.n] === 1, s: [!!D.sup[0][e.n], !!D.sup[1][e.n]] }))
+  .filter(x => x.m || x.s[0] || x.s[1]); };
 function findDup(S, g, input) {
   const x = norm(input);
   for (const e of all(S, g)) if (norm(e.n) === x) return { e, via: null };
@@ -83,22 +93,27 @@ function apply(S, p, a) {
   const g = a.g === 'girl' ? 'girl' : a.g === 'boy' ? 'boy' : S.g, D = S.d[g], ev = {}, ok = { ok: 1, ev };
   switch (a.t) {
     case 'vote': {
-      const n = String(a.n), like = a.like ? 1 : 0;
+      const n = String(a.n);
+      let like = a.like ? 1 : 0, sup = false;
       if (a.r2) {
         const r = D.r2; if (!r || !r.names.includes(n) || (n in r.votes[p])) return ok;
-        r.votes[p][n] = like; r.hist[p].push(n);
+        if (a.sup) { if (supLeft(S, g, p) > 0) { sup = true; like = 1; } else ev.nosup = 1; }
+        r.votes[p][n] = like; r.hist[p].push(n); if (sup) D.sup[p][n] = 1;
         const done = q => r.names.every(x => x in r.votes[q]);
-        if (done(0) && done(1)) { D.finals = r.names.filter(x => r.votes[0][x] === 1 && r.votes[1][x] === 1); D.r2 = null; ev.r2done = D.finals.length; }
-        else if (done(p)) ev.r2mine = 1;
+        if (done(0) && done(1)) {
+          D.finals = r.names.filter(x => (r.votes[0][x] === 1 && r.votes[1][x] === 1) || D.sup[0][x] || D.sup[1][x]);
+          D.r2 = null; ev.r2done = D.finals.length;
+        } else if (done(p)) ev.r2mine = 1;
         return ok;
       }
       if (!entry(S, g, n) || (n in D.votes[p])) return ok;
-      D.votes[p][n] = like; D.hist[p].push(n);
+      if (a.sup) { if (!D.r2 && supLeft(S, g, p) > 0) { sup = true; like = 1; } else ev.nosup = 1; }
+      D.votes[p][n] = like; D.hist[p].push(n); if (sup) D.sup[p][n] = 1;
       return ok;
     }
     case 'undo': {
-      if (a.r2) { const r = D.r2; if (r) { const x = r.hist[p].pop(); if (x) delete r.votes[p][x]; } }
-      else { const n = D.hist[p].pop(); if (n) delete D.votes[p][n]; }
+      if (a.r2) { const r = D.r2; if (r) { const x = r.hist[p].pop(); if (x) { delete r.votes[p][x]; delete D.sup[p][x]; } } }
+      else { const n = D.hist[p].pop(); if (n) { delete D.votes[p][n]; delete D.sup[p][n]; } }
       return ok;
     }
     case 'add': {
@@ -113,16 +128,22 @@ function apply(S, p, a) {
       o.splice(i + Math.floor(Math.random() * 4), 0, n);
       ev.added = n; return ok;
     }
-    case 'unmatch': { const n = String(a.n); if (entry(S, g, n)) D.votes[p][n] = 0; return ok; }
+    case 'unmatch': {
+      const n = String(a.n);
+      if (entry(S, g, n)) { D.votes[p][n] = 0; delete D.sup[p][n]; if (D.finals) D.finals = D.finals.filter(x => x !== n); }
+      return ok;
+    }
     case 'r2start': {
       if (D.r2) return ok;
-      const ms = matches(S, g).map(x => x.n), fin = (D.finals || []).filter(n => ms.includes(n)), pool = fin.length >= 2 ? fin : ms;
-      if (pool.length < 2) return { err: 'Для второго круга нужно минимум два мэтча.' };
-      D.r2 = { names: pool, votes: [{}, {}], order: [shuffle(pool), shuffle(pool)], hist: [[], []] };
+      const t = top(S, g), fin = (D.finals || []).filter(n => entry(S, g, n));
+      const pool = fin.length >= 2 ? fin.concat(t.filter(x => (x.s[0] || x.s[1]) && !fin.includes(x.e.n)).map(x => x.e.n)) : t.map(x => x.e.n);
+      if (pool.length < 2) return { err: 'Для следующего круга нужно минимум два имени в топе.' };
+      D.r2 = { names: pool, votes: [{}, {}], order: [shuffle(pool), shuffle(pool)], hist: [[], []], prevSup: D.sup, prevRn: D.rn || 1 };
+      D.sup = [{}, {}]; D.rn = (D.rn || 1) + 1;          // суперлайки обнуляются, на новый круг своя норма
       ev.r2start = pool.length; return ok;
     }
-    case 'r2cancel': D.r2 = null; return ok;
-    case 'r2clear': D.finals = null; return ok;
+    case 'r2cancel': if (D.r2) { D.sup = D.r2.prevSup || [{}, {}]; D.rn = D.r2.prevRn || 1; D.r2 = null; } return ok;
+    case 'r2clear': D.finals = null; D.rn = 1; D.sup = [{}, {}]; return ok;
     case 'profile': {
       const f = k => cap(a[k]).slice(0, 30), P = { surname: f('surname'), dad: f('dad'), patr: f('patr'), mom: f('mom'), example: false };
       if (!P.surname || !P.dad || !P.patr || !P.mom) return { err: 'Заполните все четыре поля.' };
@@ -135,8 +156,8 @@ function apply(S, p, a) {
       S.sets[a.k] = a.on ? 1 : 0; return ok;
     }
     case 'reset': S.d = { boy: mk('boy'), girl: mk('girl') }; return ok;
-    case 'resetme': for (const x in BASE) { const E = S.d[x]; E.votes[p] = {}; E.hist[p] = []; E.order[p] = mix(x, E.custom); } return ok;
+    case 'resetme': for (const x in BASE) { const E = S.d[x]; E.votes[p] = {}; E.hist[p] = []; E.sup[p] = {}; E.order[p] = mix(x, E.custom); } return ok;
   }
   return { err: 'Неизвестное действие.' };
 }
-return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply };
+return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply, top, supLeft, supQuota };

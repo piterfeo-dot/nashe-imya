@@ -10,6 +10,7 @@
   --g-page:#F0CAD8; --g-bg:#FBE6EC; --g-card:#FFFFFF; --g-ink:#4A1D33; --g-soft:#8F5F74;
   --g-accent:#D2457C; --g-tint:#F9D8E3; --g-line:#F0C3D2;
   --on-accent:#FFFFFF; --shadow:0 14px 34px rgba(27,42,78,.14); --scrim:rgba(20,26,46,.42);
+  --star:#E39B00; --on-star:#2A1B00;
   --display:"Unbounded","Nunito",system-ui,sans-serif;
   --text:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
@@ -85,7 +86,7 @@ button{cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-c
 .stamp.yes{left:20px;color:var(--accent);transform:rotate(-8deg)}
 .stamp.no{right:20px;color:var(--soft);transform:rotate(8deg)}
 
-.actions{display:flex;justify-content:center;align-items:center;gap:20px;padding-block:4px}
+.actions{display:flex;justify-content:center;align-items:center;gap:14px;padding-block:4px}
 .round{display:grid;place-items:center;border-radius:50%;background:var(--card);box-shadow:0 6px 16px rgba(0,0,0,.1);
   transition:transform .12s}
 .round:active{transform:scale(.92)}
@@ -94,6 +95,13 @@ button{cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-c
 .round.undo{width:46px;height:46px;color:var(--soft)}
 .round.yes{width:68px;height:68px;background:var(--accent);color:var(--on-accent)}
 .round:disabled{opacity:.4}
+.round.sup{width:52px;height:52px;color:var(--star);position:relative}
+.round .cnt{position:absolute;top:-5px;right:-5px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--star);color:var(--on-star);
+  font-size:12px;font-weight:800;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.stamp.sup{left:50%;top:auto;bottom:96px;transform:translateX(-50%);color:var(--star);white-space:nowrap}
+.marks{display:flex;flex-wrap:wrap;gap:6px}
+.mark{background:var(--tint);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800}
+.mark i{font-style:normal;color:var(--star)}
 
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:20px}
 .empty h3{font-family:var(--display);font-size:20px;margin:0;text-wrap:balance}
@@ -265,6 +273,10 @@ input[type=text]{background:var(--card);border:1.5px solid var(--line);border-ra
       <button class="round undo" type="button" id="b-undo" aria-label="Вернуть предыдущее имя">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12h-2" transform="translate(0,-5)"/></svg>
       </button>
+      <button class="round sup" type="button" id="b-sup" aria-label="Суперлайк">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.100 1.100-6.500L2.600 9.400l6.500-.9z"/></svg>
+        <span class="cnt" id="sup-left"></span>
+      </button>
       <button class="round yes" type="button" id="b-yes" aria-label="Нравится">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.100 3 4.500 6.600 4.500c2.100 0 3.800 1.100 5.400 3.200 1.600-2.100 3.300-3.200 5.400-3.200 3.600 0 5.700 3.600 4.200 7.100C19.500 16.400 12 21 12 21z"/></svg>
       </button>
@@ -274,7 +286,7 @@ input[type=text]{background:var(--card);border:1.5px solid var(--line);border-ra
   <!-- Мэтчи -->
   <section class="view" id="v-matches" hidden>
     <div>
-      <h2 class="h">Мэтчи</h2>
+      <h2 class="h">Топ имён</h2>
       <p class="sub" id="m-sub"></p>
     </div>
     <div class="scroll" id="m-list"></div>
@@ -282,7 +294,7 @@ input[type=text]{background:var(--card);border:1.5px solid var(--line);border-ra
 
   <nav class="tabs" id="tabs" aria-label="Разделы">
     <button type="button" data-v="deck">Имена</button>
-    <button type="button" data-v="matches">Мэтчи<span class="badge" id="badge" hidden></span></button>
+    <button type="button" data-v="matches">Топ<span class="badge" id="badge" hidden></span></button>
     <button type="button" data-v="form">Настройки</button>
   </nav>
 
@@ -303,7 +315,7 @@ input[type=text]{background:var(--card);border:1.5px solid var(--line);border-ra
   <!-- Мэтч -->
   <div class="overlay match" id="match" hidden>
     <svg class="heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.100 3 4.500 6.600 4.500c2.100 0 3.800 1.100 5.400 3.200 1.600-2.100 3.300-3.200 5.400-3.200 3.600 0 5.700 3.600 4.200 7.100C19.500 16.400 12 21 12 21z"/></svg>
-    <p class="big">Это мэтч!</p>
+    <p class="big" id="match-title">Это мэтч!</p>
     <p id="match-who"></p>
     <p class="nm" id="match-name"></p>
     <p id="match-fio"></p>
@@ -909,7 +921,7 @@ function mix(g, custom) {
   for (const s in groups) shuffle(groups[s]).forEach((n, i, a) => keyed.push([(i + Math.random()) / a.length, n]));
   return keyed.sort((x, y) => x[0] - y[0]).map(x => x[1]);
 }
-function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null }; }
+function mk(g) { return { custom: [], votes: [{}, {}], order: [mix(g), mix(g)], hist: [[], []], r2: null, finals: null, sup: [{}, {}], rn: 1 }; }
 function fresh() {
   return { profile: { surname: 'Иванов', dad: 'Андрей', patr: 'Андреевич', mom: 'Окси', example: true },
     g: 'boy', sets: { r: 1, o: 1, i: 1, e: 1 }, d: { boy: mk('boy'), girl: mk('girl') } };
@@ -919,6 +931,8 @@ function migrate(S) {
   if (S.sets.e === undefined) S.sets.e = 1;
   for (const g in BASE) {
     const D = S.d[g], names = BASE[g].map(e => e.n).concat((D.custom || []).map(e => { e.c = 1; return e.n; }));
+    if (!D.sup) D.sup = [{}, {}];
+    if (!D.rn) D.rn = D.r2 || D.finals ? 2 : 1;
     D.order.forEach((o, p) => { const has = new Set(o), add = shuffle(names.filter(n => !has.has(n))); if (add.length) D.order[p] = o.concat(add); });
   }
   return S;
@@ -938,6 +952,14 @@ function queue(S, p) {
   return ord.filter(n => !(n in v));
 }
 const matches = (S, g) => all(S, g).filter(e => S.d[g].votes[0][e.n] === 1 && S.d[g].votes[1][e.n] === 1);
+/* Суперлайки: сколько даётся каждому на круг (1-й, 2-й, 3-й, 4-й и дальше) */
+const SUP = [10, 5, 3, 1];
+const supQuota = rn => SUP[Math.min(rn || 1, SUP.length) - 1];
+const supLeft = (S, g, p) => Math.max(0, supQuota(S.d[g].rn) - Object.keys(S.d[g].sup[p]).length);
+/* Топ: мэтчи плюс имена с суперлайком хотя бы одного из двоих. m — мэтч, s — чей суперлайк */
+const top = (S, g) => { const D = S.d[g]; return all(S, g)
+  .map(e => ({ e, m: D.votes[0][e.n] === 1 && D.votes[1][e.n] === 1, s: [!!D.sup[0][e.n], !!D.sup[1][e.n]] }))
+  .filter(x => x.m || x.s[0] || x.s[1]); };
 function findDup(S, g, input) {
   const x = norm(input);
   for (const e of all(S, g)) if (norm(e.n) === x) return { e, via: null };
@@ -949,22 +971,27 @@ function apply(S, p, a) {
   const g = a.g === 'girl' ? 'girl' : a.g === 'boy' ? 'boy' : S.g, D = S.d[g], ev = {}, ok = { ok: 1, ev };
   switch (a.t) {
     case 'vote': {
-      const n = String(a.n), like = a.like ? 1 : 0;
+      const n = String(a.n);
+      let like = a.like ? 1 : 0, sup = false;
       if (a.r2) {
         const r = D.r2; if (!r || !r.names.includes(n) || (n in r.votes[p])) return ok;
-        r.votes[p][n] = like; r.hist[p].push(n);
+        if (a.sup) { if (supLeft(S, g, p) > 0) { sup = true; like = 1; } else ev.nosup = 1; }
+        r.votes[p][n] = like; r.hist[p].push(n); if (sup) D.sup[p][n] = 1;
         const done = q => r.names.every(x => x in r.votes[q]);
-        if (done(0) && done(1)) { D.finals = r.names.filter(x => r.votes[0][x] === 1 && r.votes[1][x] === 1); D.r2 = null; ev.r2done = D.finals.length; }
-        else if (done(p)) ev.r2mine = 1;
+        if (done(0) && done(1)) {
+          D.finals = r.names.filter(x => (r.votes[0][x] === 1 && r.votes[1][x] === 1) || D.sup[0][x] || D.sup[1][x]);
+          D.r2 = null; ev.r2done = D.finals.length;
+        } else if (done(p)) ev.r2mine = 1;
         return ok;
       }
       if (!entry(S, g, n) || (n in D.votes[p])) return ok;
-      D.votes[p][n] = like; D.hist[p].push(n);
+      if (a.sup) { if (!D.r2 && supLeft(S, g, p) > 0) { sup = true; like = 1; } else ev.nosup = 1; }
+      D.votes[p][n] = like; D.hist[p].push(n); if (sup) D.sup[p][n] = 1;
       return ok;
     }
     case 'undo': {
-      if (a.r2) { const r = D.r2; if (r) { const x = r.hist[p].pop(); if (x) delete r.votes[p][x]; } }
-      else { const n = D.hist[p].pop(); if (n) delete D.votes[p][n]; }
+      if (a.r2) { const r = D.r2; if (r) { const x = r.hist[p].pop(); if (x) { delete r.votes[p][x]; delete D.sup[p][x]; } } }
+      else { const n = D.hist[p].pop(); if (n) { delete D.votes[p][n]; delete D.sup[p][n]; } }
       return ok;
     }
     case 'add': {
@@ -979,16 +1006,22 @@ function apply(S, p, a) {
       o.splice(i + Math.floor(Math.random() * 4), 0, n);
       ev.added = n; return ok;
     }
-    case 'unmatch': { const n = String(a.n); if (entry(S, g, n)) D.votes[p][n] = 0; return ok; }
+    case 'unmatch': {
+      const n = String(a.n);
+      if (entry(S, g, n)) { D.votes[p][n] = 0; delete D.sup[p][n]; if (D.finals) D.finals = D.finals.filter(x => x !== n); }
+      return ok;
+    }
     case 'r2start': {
       if (D.r2) return ok;
-      const ms = matches(S, g).map(x => x.n), fin = (D.finals || []).filter(n => ms.includes(n)), pool = fin.length >= 2 ? fin : ms;
-      if (pool.length < 2) return { err: 'Для второго круга нужно минимум два мэтча.' };
-      D.r2 = { names: pool, votes: [{}, {}], order: [shuffle(pool), shuffle(pool)], hist: [[], []] };
+      const t = top(S, g), fin = (D.finals || []).filter(n => entry(S, g, n));
+      const pool = fin.length >= 2 ? fin.concat(t.filter(x => (x.s[0] || x.s[1]) && !fin.includes(x.e.n)).map(x => x.e.n)) : t.map(x => x.e.n);
+      if (pool.length < 2) return { err: 'Для следующего круга нужно минимум два имени в топе.' };
+      D.r2 = { names: pool, votes: [{}, {}], order: [shuffle(pool), shuffle(pool)], hist: [[], []], prevSup: D.sup, prevRn: D.rn || 1 };
+      D.sup = [{}, {}]; D.rn = (D.rn || 1) + 1;          // суперлайки обнуляются, на новый круг своя норма
       ev.r2start = pool.length; return ok;
     }
-    case 'r2cancel': D.r2 = null; return ok;
-    case 'r2clear': D.finals = null; return ok;
+    case 'r2cancel': if (D.r2) { D.sup = D.r2.prevSup || [{}, {}]; D.rn = D.r2.prevRn || 1; D.r2 = null; } return ok;
+    case 'r2clear': D.finals = null; D.rn = 1; D.sup = [{}, {}]; return ok;
     case 'profile': {
       const f = k => cap(a[k]).slice(0, 30), P = { surname: f('surname'), dad: f('dad'), patr: f('patr'), mom: f('mom'), example: false };
       if (!P.surname || !P.dad || !P.patr || !P.mom) return { err: 'Заполните все четыре поля.' };
@@ -1001,11 +1034,11 @@ function apply(S, p, a) {
       S.sets[a.k] = a.on ? 1 : 0; return ok;
     }
     case 'reset': S.d = { boy: mk('boy'), girl: mk('girl') }; return ok;
-    case 'resetme': for (const x in BASE) { const E = S.d[x]; E.votes[p] = {}; E.hist[p] = []; E.order[p] = mix(x, E.custom); } return ok;
+    case 'resetme': for (const x in BASE) { const E = S.d[x]; E.votes[p] = {}; E.hist[p] = []; E.sup[p] = {}; E.order[p] = mix(x, E.custom); } return ok;
   }
   return { err: 'Неизвестное действие.' };
 }
-return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply };
+return { BASE, SETS, norm, cap, patronymic, femPatr, femSurname, fresh, migrate, all, entry, r2q, queue, matches, findDup, apply, top, supLeft, supQuota };
 })();
 /*SHARED-END*/
 </script>
@@ -1051,7 +1084,7 @@ function take(resp, fromPoll) {
   if (!resp.state) return;
   const had = !!(S && S.d[S.g].r2);
   JOIN = null; S = resp.state; V = resp.v; INVITE = resp.invite || null; BOT = resp.bot || ''; U.p = resp.p;
-  if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает второй круг: ${S.d[S.g].r2.names.length} имён.`);
+  if (fromPoll && !had && S.d[S.g].r2) toast(`${players()[1 - U.p]} запускает ${S.d[S.g].rn}-й круг: ${S.d[S.g].r2.names.length} имён.`);
   render();
 }
 function send(a) {
@@ -1072,7 +1105,8 @@ async function actWait(a) {
 const players = () => [S.profile.dad || 'Папа', S.profile.mom || 'Мама'];
 const queue = () => Core.queue(S, U.p);
 const r2q = () => Core.r2q(S, U.p);
-const matches = g => Core.matches(S, g);
+const topList = () => Core.top(S, S.g);
+const supOk = () => Core.supLeft(S, S.g, U.p) > 0 && !(S.d[S.g].r2 && !r2q());   // пока идёт круг, суперлайк только на его карточках
 function fio(g, n) {
   const P = S.profile;
   return g === 'boy' ? `${P.surname} ${n} ${P.patr}` : `${femSurname(P.surname)} ${n} ${femPatr(P.patr)}`;
@@ -1093,9 +1127,9 @@ function cardHTML(e, cls) {
     : e.c ? `<div class="forms"><span class="lbl">Это имя добавили вы</span></div>` : '';
   return `<article class="card ${cls}" data-n="${esc(e.n)}">
     <span class="wm" aria-hidden="true">${esc(e.n[0])}</span>
-    <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span>
+    <span class="stamp yes">Нравится</span><span class="stamp no">Не то</span><span class="stamp sup">★ Суперлайк</span>
     <div class="card-main">
-      <span class="lbl">${r2q() ? 'Второй круг' : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
+      <span class="lbl">${r2q() ? S.d[g].rn + '-й круг' : e.c ? 'Своё имя' : SETS[e.s] || ''}</span>
       <h2 style="font-size:${nameSize(e.n)}px">${esc(e.n)}</h2>
       <p class="fio">${esc(fio(g, e.n))}</p>
       <p class="ini">В документах: ${esc(initials(g, e.n))}</p>
@@ -1103,10 +1137,11 @@ function cardHTML(e, cls) {
 }
 function renderDeck() {
   const q = queue(), st = $('#stack'), D = S.d[S.g], r2m = !!r2q();
-  $('#left').textContent = r2m ? `Второй круг: осталось ${q.length}` : q.length ? `Осталось имён: ${q.length}` : '';
+  $('#left').textContent = r2m ? `${D.rn}-й круг: осталось ${q.length}` : q.length ? `Осталось имён: ${q.length}` : '';
   $('#add-open').hidden = r2m;
   $('#b-no').disabled = $('#b-yes').disabled = !q.length;
   $('#b-undo').disabled = !(r2m ? D.r2.hist[U.p] : D.hist[U.p]).length;
+  $('#sup-left').textContent = Core.supLeft(S, S.g, U.p); $('#b-sup').disabled = !q.length || !supOk();
   const key = [S.g, U.p, r2m, q[0], q[1], JSON.stringify(S.profile)].join('|');
   if (key === deckKey && (busy || st.firstElementChild)) return;   // не перерисовываем карточку, которую сейчас тянут
   deckKey = key;
@@ -1119,32 +1154,36 @@ function renderDeck() {
   bindCard(st.querySelector('.card.top'));
 }
 function renderMatches() {
-  const D = S.d[S.g], ms = matches(S.g), who = S.g === 'boy' ? 'мальчика' : 'девочки', pl = players();
-  const finals = (D.finals || []).filter(n => ms.some(e => e.n === n));
-  const item = e => `<div class="m">
-      <div class="m-top"><b>${esc(e.n)}</b><button class="rm" type="button" data-rm="${esc(e.n)}">Убрать</button></div>
-      <p class="full">${esc(fio(S.g, e.n))}</p>
-      ${e.f.length ? `<p>${esc(e.f.join(', '))}</p>` : ''}</div>`;
-  $('#m-sub').textContent = ms.length ? `Имена для ${who}, которые нравятся вам обоим: ${ms.length}` : '';
-  if (!ms.length) {
-    $('#m-list').innerHTML = `<div class="empty"><h3>Пока нет мэтчей для ${who}</h3><p>Мэтч появится, когда вы оба поставите лайк одному имени.</p></div>`;
+  const g = S.g, D = S.d[g], T = topList(), who = g === 'boy' ? 'мальчика' : 'девочки', pl = players();
+  const info = n => T.find(x => x.e.n === n) || (Core.entry(S, g, n) ? { e: Core.entry(S, g, n), m: false, s: [false, false] } : null);
+  const finals = (D.finals || []).map(info).filter(Boolean), fn = finals.map(x => x.e.n), rest = T.filter(x => !fn.includes(x.e.n));
+  const item = x => {
+    const marks = (x.m ? ['<span class="mark">Мэтч</span>'] : []).concat([0, 1].filter(p => x.s[p]).map(p => `<span class="mark"><i>★</i> ${esc(pl[p])}</span>`));
+    return `<div class="m">
+      <div class="m-top"><b>${esc(x.e.n)}</b><button class="rm" type="button" data-rm="${esc(x.e.n)}">Убрать</button></div>
+      <p class="full">${esc(fio(g, x.e.n))}</p>
+      ${marks.length ? `<div class="marks">${marks.join('')}</div>` : ''}
+      ${x.e.f.length ? `<p>${esc(x.e.f.join(', '))}</p>` : ''}</div>`;
+  };
+  $('#m-sub').textContent = T.length ? `В топе для ${who}: ${T.length}. Мэтчей: ${T.filter(x => x.m).length}, с суперлайком: ${T.filter(x => x.s[0] || x.s[1]).length}.` : '';
+  if (!T.length && !finals.length) {
+    $('#m-list').innerHTML = `<div class="empty"><h3>Топ для ${who} пока пуст</h3><p>Сюда попадают мэтчи — имена, которые лайкнули вы оба, — и имена с суперлайком.</p></div>`;
     return;
   }
   let ctl = '';
   if (D.r2) {
     const st = p => { const l = D.r2.names.filter(n => !(n in D.r2.votes[p])).length; return `${esc(pl[p])}: ${l ? 'осталось ' + l : 'готово'}`; };
-    ctl = `<p class="note">Идёт второй круг. ${st(0)}. ${st(1)}.</p>
-      <button class="btn ghost" type="button" data-act="r2cancel">Отменить второй круг</button>`;
+    ctl = `<p class="note">Идёт ${D.rn}-й круг. ${st(0)}. ${st(1)}.</p>
+      <button class="btn ghost" type="button" data-act="r2cancel">Отменить этот круг</button>`;
   } else {
-    const pool = finals.length >= 2 ? finals.length : ms.length;
-    if (pool >= 2) ctl = `<button class="btn" type="button" data-act="r2start">${finals.length >= 2 ? 'Ещё один круг среди финалистов' : 'Начать второй круг'}</button>
-      <p class="sub">Каждый заново свайпает ${pool} ${finals.length >= 2 ? 'финалистов' : 'мэтчей'}. Останутся имена, которые снова понравятся обоим.</p>`;
-    if (finals.length) ctl += `<button class="btn ghost" type="button" data-act="r2clear">Сбросить финалистов</button>`;
+    const next = (D.rn || 1) + 1, pool = finals.length >= 2 ? finals.length + rest.filter(x => x.s[0] || x.s[1]).length : T.length;
+    if (pool >= 2) ctl = `<button class="btn" type="button" data-act="r2start">Начать ${next}-й круг</button>
+      <p class="sub">Каждый заново свайпает ${pool} имён. Останутся те, что снова понравятся обоим, и имена с новым суперлайком. Старые суперлайки сгорают, на ${next}-й круг у каждого их ${Core.supQuota(next)}.</p>`;
+    if (finals.length) ctl += `<button class="btn ghost" type="button" data-act="r2clear">Сбросить круги и суперлайки</button>`;
   }
-  const rest = ms.filter(e => !finals.includes(e.n));
   $('#m-list').innerHTML = ctl
-    + (finals.length ? `<span class="lbl">Финалисты второго круга</span>` + ms.filter(e => finals.includes(e.n)).map(item).join('') : '')
-    + (finals.length && rest.length ? `<span class="lbl">Остальные мэтчи</span>` : '')
+    + (finals.length ? `<span class="lbl">Финалисты после ${D.r2 ? D.rn - 1 : D.rn}-го круга</span>` + finals.map(item).join('') : '')
+    + (finals.length && rest.length ? `<span class="lbl">Остальной топ</span>` : '')
     + rest.map(item).join('');
 }
 let patrManual = false;
@@ -1182,7 +1221,7 @@ function render() {
   const pl = players();
   document.querySelectorAll('#seg-p button').forEach(b => { b.textContent = pl[+b.dataset.p]; b.setAttribute('aria-pressed', +b.dataset.p === U.p); });
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === U.view));
-  const mc = matches(S.g).length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
+  const mc = topList().length, bd = $('#badge'); bd.hidden = !mc; bd.textContent = mc;
   $('#invite').hidden = !INVITE;
   if (INVITE) { $('#invite-code').textContent = INVITE; $('#inv-share').hidden = !(initData && BOT); }
   const rb = $('#f-reset'); rb.dataset.label = REMOTE ? 'Сбросить всё у обоих: свайпы и свои имена' : 'Сбросить все свайпы и свои имена';
@@ -1197,43 +1236,60 @@ function go(view) { U.view = view; saveU(); if (view === 'form') renderForm(); r
 /* ---------- мэтч: показываем каждому, кто его ещё не видел ---------- */
 function checkMatches() {
   if (!$('#match').hidden) return;
-  const seen = SEEN[S.g] || (SEEN[S.g] = []), e = matches(S.g).find(x => !seen.includes(x.n));
-  if (!e) return;
-  seen.push(e.n); LS.set('nashe-imya-seen', SEEN);
-  const pl = players();
-  $('#match-who').textContent = `${pl[0]} и ${pl[1]} выбрали`;
-  $('#match-name').textContent = e.n; $('#match-fio').textContent = fio(S.g, e.n);
-  $('#match').hidden = false; $('#match-next').focus();
-  try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (x) {}
+  const seen = SEEN[S.g] || (SEEN[S.g] = []), pl = players();
+  const show = (key, title, who, n) => {
+    seen.push(key); LS.set('nashe-imya-seen', SEEN);
+    $('#match-title').textContent = title; $('#match-who').textContent = who;
+    $('#match-name').textContent = n; $('#match-fio').textContent = fio(S.g, n);
+    $('#match').hidden = false; $('#match-next').focus();
+    try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (x) {}
+  };
+  for (const x of topList()) {
+    const n = x.e.n;
+    if (x.m && !seen.includes(n)) return show(n, 'Это мэтч!', `${pl[0]} и ${pl[1]} выбрали`, n);
+    if (REMOTE && !x.m && x.s[1 - U.p] && !seen.includes('★' + n)) return show('★' + n, 'Суперлайк!', `${pl[1 - U.p]}: очень хочу это имя`, n);
+  }
 }
 
 /* ---------- свайпы ---------- */
-function setStamp(el, dx) {
-  el.querySelector('.stamp.yes').style.opacity = Math.max(0, Math.min(1, dx / 90));
-  el.querySelector('.stamp.no').style.opacity = Math.max(0, Math.min(1, -dx / 90));
+function setStamp(el, dx, dy) {
+  const c = v => Math.max(0, Math.min(1, v)), up = dy !== undefined && -dy > Math.abs(dx) && supOk() ? c(-dy / 110) : 0;
+  el.querySelector('.stamp.yes').style.opacity = up ? 0 : c(dx / 90);
+  el.querySelector('.stamp.no').style.opacity = up ? 0 : c(-dx / 90);
+  el.querySelector('.stamp.sup').style.opacity = up;
 }
 function bindCard(el) {
-  let sx = 0, sy = 0, dx = 0, drag = false;
-  el.onpointerdown = e => { if (busy) return; drag = true; sx = e.clientX; sy = e.clientY; dx = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} el.style.transition = 'none'; };
-  el.onpointermove = e => { if (!drag) return; dx = e.clientX - sx; el.style.transform = `translate(${dx}px,${(e.clientY - sy) * .25}px) rotate(${dx / 20}deg)`; setStamp(el, dx); };
-  const end = () => { if (!drag) return; drag = false; el.style.transition = ''; if (Math.abs(dx) > 90) fly(dx > 0); else { el.style.transform = ''; setStamp(el, 0); } };
+  let sx = 0, sy = 0, dx = 0, dy = 0, drag = false;
+  el.onpointerdown = e => { if (busy) return; drag = true; sx = e.clientX; sy = e.clientY; dx = dy = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} el.style.transition = 'none'; };
+  el.onpointermove = e => {
+    if (!drag) return; dx = e.clientX - sx; dy = e.clientY - sy;
+    el.style.transform = `translate(${dx}px,${dy < 0 ? dy * .7 : dy * .25}px) rotate(${dx / 20}deg)`; setStamp(el, dx, dy);
+  };
+  const end = () => {
+    if (!drag) return; drag = false; el.style.transition = '';
+    if (-dy > 110 && Math.abs(dx) < 90 && supOk()) fly(true, true);      // свайп вверх — суперлайк
+    else if (Math.abs(dx) > 90) fly(dx > 0);
+    else { el.style.transform = ''; setStamp(el, 0, 0); }
+  };
   el.onpointerup = end; el.onpointercancel = end;
 }
-function fly(like) {
+function fly(like, sup) {
   if (busy || !S) return; const q = queue(); if (!q.length) return;
+  if (sup && !supOk()) return;
   const el = $('.card.top'); if (!el || el.dataset.n !== q[0]) return;
   busy = true;
   el.style.transition = 'transform .26s ease-in, opacity .26s';
-  el.style.transform = `translate(${like ? 520 : -520}px,40px) rotate(${like ? 24 : -24}deg)`; el.style.opacity = 0;
-  setStamp(el, like ? 200 : -200);
-  setTimeout(() => { busy = false; commit(q[0], like); }, 240);
+  el.style.transform = sup ? 'translate(0,-640px)' : `translate(${like ? 520 : -520}px,40px) rotate(${like ? 24 : -24}deg)`; el.style.opacity = 0;
+  if (sup) setStamp(el, 0, -200); else setStamp(el, like ? 200 : -200, 0);
+  setTimeout(() => { busy = false; commit(q[0], like, sup); }, 240);
 }
-function commit(n, like) {
-  const r = actNow({ t: 'vote', g: S.g, n, like, r2: !!r2q() }), ev = r.ev || {};
+function commit(n, like, sup) {
+  const r = actNow({ t: 'vote', g: S.g, n, like, sup: !!sup, r2: !!r2q() }), ev = r.ev || {};
   if (ev.r2done !== undefined) {
     U.view = 'matches'; saveU();
-    toast(ev.r2done ? `Второй круг завершён. Финалистов: ${ev.r2done}` : 'Второй круг завершён. Общих имён не осталось, мэтчи на месте.');
-  } else if (ev.r2mine) toast(`Вы прошли второй круг. Теперь очередь: ${players()[1 - U.p]}.`);
+    toast(ev.r2done ? `Круг завершён. Финалистов: ${ev.r2done}` : 'Круг завершён. Общих имён не осталось, топ на месте.');
+  } else if (ev.r2mine) toast(`Вы прошли круг. Теперь очередь: ${players()[1 - U.p]}.`);
+  else if (ev.nosup) toast('Суперлайки закончились, поставлен обычный лайк');
   render();
 }
 
@@ -1247,22 +1303,23 @@ $('#seg-p').onclick = e => { const b = e.target.closest('button'); if (!b) retur
 $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); };
 $('#b-yes').onclick = () => fly(true);
 $('#b-no').onclick = () => fly(false);
+$('#b-sup').onclick = () => fly(true, true);
 $('#b-undo').onclick = () => { if (busy) return; actNow({ t: 'undo', g: S.g, r2: !!r2q() }); render(); };
 document.addEventListener('keydown', e => {
   if (!S || JOIN || U.view !== 'deck' || !$('#add').hidden || !$('#match').hidden || /INPUT/.test(e.target.tagName)) return;
-  if (e.key === 'ArrowRight') fly(true); if (e.key === 'ArrowLeft') fly(false);
+  if (e.key === 'ArrowRight') fly(true); if (e.key === 'ArrowLeft') fly(false); if (e.key === 'ArrowUp') fly(true, true);
 });
 $('#m-list').onclick = async e => {
   const a = e.target.closest('[data-act]');
   if (a) {
     const act = a.dataset.act, r = await actWait({ t: act, g: S.g });
     if (r.err) { toast(r.err); return; }
-    if (act === 'r2start') { toast(`Второй круг начался: ${r.ev.r2start} имён. ${REMOTE ? 'Свайпайте каждый у себя.' : 'Свайпайте по очереди.'}`); go('deck'); }
-    if (act === 'r2cancel') toast('Второй круг отменён');
+    if (act === 'r2start') { toast(`Круг начался: ${r.ev.r2start} имён. ${REMOTE ? 'Свайпайте каждый у себя.' : 'Свайпайте по очереди.'}`); go('deck'); }
+    if (act === 'r2cancel') toast('Круг отменён, суперлайки возвращены');
     return;
   }
   const b = e.target.closest('[data-rm]'); if (!b) return;
-  const r = await actWait({ t: 'unmatch', g: S.g, n: b.dataset.rm }); if (!r.err) toast(`«${b.dataset.rm}» убрано из мэтчей`);
+  const r = await actWait({ t: 'unmatch', g: S.g, n: b.dataset.rm }); if (!r.err) toast(`«${b.dataset.rm}» убрано из топа`);
 };
 $('#match-next').onclick = () => { $('#match').hidden = true; checkMatches(); };
 $('#match-open').onclick = () => { $('#match').hidden = true; go('matches'); };
