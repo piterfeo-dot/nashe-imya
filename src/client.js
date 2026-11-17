@@ -152,6 +152,7 @@ function renderMatches() {
     + (finals.length && rest.length ? `<span class="lbl">Остальной топ</span>` : '')
     + rest.map(item).join('');
 }
+const RM = {};                             // имена, у которых бежит отсчёт «Убрать»
 /* мои лайки: всё, что я свайпнул вправо; здесь же можно поставить или снять суперлайк */
 function renderLikes() {
   const g = S.g, D = S.d[g], p = U.p, v = D.votes[p], hist = D.hist[p], left = Core.supLeft(S, g, p);
@@ -159,10 +160,12 @@ function renderLikes() {
   $('#l-sub').textContent = mine.length ? `Имён: ${mine.length}. Суперлайков осталось: ${left}${D.r2 ? ' (пока идёт круг, здесь их ставить нельзя)' : ''}. Новые сверху.` : '';
   $('#l-list').innerHTML = mine.length ? mine.map(e => {
     const s = !!D.sup[p][e.n], m = D.votes[1 - p][e.n] === 1;
-    return `<div class="lrow">
-      <div class="lmain"><b>${esc(e.n)}</b><span>${m ? 'Мэтч' : ''}${m && e.f.length ? ' · ' : ''}${esc(e.f.join(', '))}</span></div>
-      <button class="star" type="button" data-sup="${esc(e.n)}" aria-pressed="${s}" aria-label="${s ? 'Снять суперлайк' : 'Поставить суперлайк'}">★</button>
-      <button class="rm" type="button" data-unlike="${esc(e.n)}">Убрать</button></div>`;
+    const rm = RM[g + '|' + e.n];          // идёт трёхсекундный отсчёт перед снятием лайка
+    return `<div class="lrow${m ? ' both' : ''}${rm ? ' going' : ''}">
+      <div class="lmain"><b>${esc(e.n)}${m ? ' <span class="mark on">Мэтч</span>' : ''}</b><span>${rm ? 'Лайк снимается…' : esc(e.f.join(', '))}</span></div>
+      <button class="star" type="button" data-sup="${esc(e.n)}" aria-pressed="${s}" ${rm ? 'disabled' : ''} aria-label="${s ? 'Снять суперлайк' : 'Поставить суперлайк'}">★</button>
+      <button class="rm" type="button" data-unlike="${esc(e.n)}">${rm ? 'Отменить' : 'Убрать'}</button>
+      ${rm ? `<i class="bar" style="animation-delay:-${Date.now() - rm.t0}ms"></i>` : ''}</div>`;
   }).join('') : `<div class="empty"><h3>Лайков пока нет</h3><p>Здесь появятся все имена, которые вы свайпнули вправо.</p></div>`;
 }
 let patrManual = false;
@@ -355,7 +358,15 @@ $('#m-list').onclick = async e => {
 $('#l-list').onclick = async e => {
   const s = e.target.closest('[data-sup]'), u = e.target.closest('[data-unlike]');
   if (s) { const r = await actWait({ t: 'sup', g: S.g, n: s.dataset.sup, on: s.getAttribute('aria-pressed') !== 'true' }); if (r.err) toast(r.err); }
-  if (u) { const r = await actWait({ t: 'unmatch', g: S.g, n: u.dataset.unlike }); if (!r.err) toast(`Лайк с имени «${u.dataset.unlike}» снят`); }
+  if (u) {
+    const g = S.g, n = u.dataset.unlike, key = g + '|' + n;
+    if (RM[key]) { clearTimeout(RM[key].timer); delete RM[key]; renderLikes(); return; }     // успели отменить
+    RM[key] = { t0: Date.now(), timer: setTimeout(async () => {
+      delete RM[key];
+      const r = await actWait({ t: 'unmatch', g, n }); if (!r.err) toast(`Лайк с имени «${n}» снят`);
+    }, 3000) };
+    renderLikes();
+  }
 };
 $('#match-next').onclick = () => { $('#match').hidden = true; checkMatches(); };
 $('#match-open').onclick = () => { $('#match').hidden = true; go('matches'); };
